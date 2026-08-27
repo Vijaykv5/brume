@@ -419,7 +419,7 @@ export function SceneCanvas() {
     <div className="scene-stage">
       <Canvas
         className="scene-canvas"
-        shadows
+        shadows={{ type: THREE.PCFShadowMap }}
         camera={{ fov: 36, near: 0.1, far: 140, position: [22, 24, 16] }}
         gl={{ antialias: true, alpha: true }}
         onCreated={({ gl }) => {
