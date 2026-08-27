@@ -1,26 +1,97 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("/inter-latin.woff2") format("woff2");
+}
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --font-inter: "Inter";
+  --page-background: #bfe8ff;
+  --page-foreground: #0a1720;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+* {
+  box-sizing: border-box;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  margin: 0;
+  font-family: var(--font-inter), "Inter", -apple-system, BlinkMacSystemFont,
+    sans-serif;
+  color: var(--page-foreground);
+  background: var(--page-background);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: geometricPrecision;
+}
+
+.scene-shell {
+  width: 100vw;
+  height: 100dvh;
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, #a8dcff 0%, #c8efff 56%, #edf8ff 100%);
+}
+
+.scene-stage {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+}
+
+.scene-canvas {
+  display: block;
+  width: 100vw;
+  height: 100dvh;
+  touch-action: none;
+}
+
+.reset-camera-button {
+  min-height: 40px;
+  position: absolute;
+  right: 16px;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  z-index: 1;
+  padding: 0 14px;
+  max-width: calc(100vw - 32px);
+  color: rgb(28 48 57 / 92%);
+  background: rgb(255 255 255 / 72%);
+  border: 1px solid rgb(76 122 143 / 24%);
+  border-radius: 999px;
+  box-shadow: 0 10px 24px rgb(38 94 116 / 14%);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  backdrop-filter: blur(14px);
+}
+
+.reset-camera-button:hover {
+  background: rgb(255 255 255 / 84%);
+}
+
+.reset-camera-button:focus-visible {
+  outline: 3px solid rgb(48 121 168 / 72%);
+  outline-offset: 3px;
+}
+
+@media (max-width: 520px) {
+  .reset-camera-button {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
 }
