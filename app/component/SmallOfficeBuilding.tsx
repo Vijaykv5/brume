@@ -240,7 +240,7 @@ export function SmallOfficeBuilding({
         </group>
       </group>
 
-      <group position={[width * 0.34, height + 1.08, depth * 0.18]}>
+      <group position={[0, height + 1.08, 0]}>
         <BuildingBadge
           title={name ?? domain}
           subtitle={price}

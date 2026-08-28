@@ -338,7 +338,7 @@ export function OfficeBuilding({
         ))}
       </group>
 
-      <group position={[width * 0.26, height + 1.24, depth * 0.28]}>
+      <group position={[0, height + 1.24, 0]}>
         <BuildingBadge
           title={name ?? domain}
           subtitle={domain}

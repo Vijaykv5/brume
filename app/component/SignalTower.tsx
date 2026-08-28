@@ -259,7 +259,7 @@ export function SignalTower({
       <PanelAntenna position={[-baseWidth * 0.36, height * 0.66, -depth * 0.32]} rotation={[0, -0.44, 0]} />
       <PanelAntenna position={[baseWidth * 0.26, height * 0.82, depth * 0.24]} rotation={[0, 0.6, 0]} />
 
-      <group position={[baseWidth * 0.16, height * 1.28, depth * 0.35]}>
+      <group position={[0, height * 1.28, 0]}>
         <BuildingBadge
           title={name}
           subtitle={price}
