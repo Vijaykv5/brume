@@ -21,6 +21,7 @@ export type SignalTowerProps = {
   height: number;
   baseWidth: number;
   depth: number;
+  clickable?: boolean;
 };
 
 function getDomainUrl(domain: string, domainUrl?: string) {
@@ -114,9 +115,10 @@ export function SignalTower({
   height,
   baseWidth,
   depth,
+  clickable = true,
 }: SignalTowerProps) {
   const [hovered, setHovered] = useState(false);
-  const buildingUrl = getDomainUrl(domain, domainUrl);
+  const buildingUrl = clickable ? getDomainUrl(domain, domainUrl) : "";
   const levels = [0, 0.18, 0.36, 0.54, 0.72, 0.88, 1] as const;
   const legRadius = baseWidth * 0.014;
   const braceRadius = baseWidth * 0.008;

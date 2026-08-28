@@ -23,6 +23,7 @@ export type SmallOfficeBuildingProps = {
   logoUrl?: string;
   name?: string;
   domainUrl?: string;
+  clickable?: boolean;
 };
 
 function Window({
@@ -113,6 +114,7 @@ export function SmallOfficeBuilding({
   logoUrl = "",
   name,
   domainUrl,
+  clickable = true,
 }: SmallOfficeBuildingProps) {
   const [hovered, setHovered] = useState(false);
   const floorHeight = height / 2;
@@ -123,7 +125,7 @@ export function SmallOfficeBuilding({
   const windowWidth = width * 0.2;
   const windowHeight = floorHeight * 0.42;
   const sideWindowWidth = depth * 0.2;
-  const buildingUrl = getDomainUrl(domain, domainUrl);
+  const buildingUrl = clickable ? getDomainUrl(domain, domainUrl) : "";
 
   useEffect(() => {
     if (!hovered || !buildingUrl) return;

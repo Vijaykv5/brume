@@ -27,6 +27,7 @@ export type OfficeBuildingProps = {
   showLabels?: boolean;
   name?: string;
   domainUrl?: string;
+  clickable?: boolean;
 };
 
 function TextLabel({
@@ -155,6 +156,7 @@ export function OfficeBuilding({
   showLabels = true,
   name,
   domainUrl,
+  clickable = true,
 }: OfficeBuildingProps) {
   const [hovered, setHovered] = useState(false);
   const frontZ = depth / 2 + 0.045;
@@ -169,7 +171,7 @@ export function OfficeBuilding({
   const columnSpacing = width * 0.11;
   const sideWindowWidth = depth * 0.18;
   const sideWindowSpacing = depth * 0.21;
-  const buildingUrl = getDomainUrl(domain, domainUrl);
+  const buildingUrl = clickable ? getDomainUrl(domain, domainUrl) : "";
 
   useEffect(() => {
     if (!hovered || !buildingUrl) return;

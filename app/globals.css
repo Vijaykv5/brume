@@ -155,6 +155,370 @@ body {
   font-weight: 700;
 }
 
+.add-building-button {
+  min-height: 44px;
+  position: absolute;
+  top: max(16px, env(safe-area-inset-top));
+  right: 16px;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 0 16px 0 13px;
+  color: rgb(18 31 37 / 94%);
+  background: rgb(255 255 255 / 90%);
+  border: 1px solid rgb(50 78 90 / 16%);
+  border-radius: 999px;
+  box-shadow: 0 14px 34px rgb(34 78 96 / 18%);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  backdrop-filter: blur(12px);
+  pointer-events: auto;
+}
+
+.add-building-button span {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  color: white;
+  background: rgb(27 43 50 / 94%);
+  border-radius: 999px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.add-building-button:hover {
+  background: white;
+  transform: translateY(-1px);
+}
+
+.add-building-button:focus-visible,
+.building-panel-close:focus-visible,
+.building-type-select:focus-visible,
+.building-primary-action:focus-visible,
+.building-secondary-action:focus-visible,
+.add-building-overlay:focus-visible,
+.building-form-fields input:focus-visible {
+  outline: 3px solid rgb(48 121 168 / 72%);
+  outline-offset: 3px;
+}
+
+.add-building-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  padding: 0;
+  background: rgb(4 19 24 / 22%);
+  border: 0;
+  cursor: default;
+  animation: building-overlay-fade 180ms ease-out both;
+}
+
+.add-building-panel {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 4;
+  display: flex;
+  width: min(410px, calc(100vw - 24px));
+  max-width: calc(100vw - 24px);
+  flex-direction: column;
+  gap: 18px;
+  padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+  overflow-y: auto;
+  color: rgb(24 38 44 / 94%);
+  background: rgb(255 255 255 / 88%);
+  border-left: 1px solid rgb(60 90 103 / 16%);
+  box-shadow: -18px 0 46px rgb(20 61 78 / 18%);
+  backdrop-filter: blur(18px);
+  animation: building-panel-slide-in 230ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  pointer-events: auto;
+}
+
+.building-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.building-panel-header p {
+  margin: 0 0 4px;
+  color: rgb(58 79 88 / 68%);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.building-panel-header h1,
+.building-panel-copy h2 {
+  margin: 0;
+  color: rgb(13 29 36 / 96%);
+  font-size: 22px;
+  font-weight: 850;
+  letter-spacing: 0;
+}
+
+.building-panel-close {
+  display: grid;
+  min-width: 44px;
+  min-height: 44px;
+  place-items: center;
+  color: rgb(22 38 45 / 82%);
+  background: rgb(239 244 246 / 82%);
+  border: 1px solid rgb(60 90 103 / 14%);
+  border-radius: 999px;
+  font: inherit;
+  font-size: 18px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.building-panel-view {
+  display: grid;
+  gap: 16px;
+}
+
+.building-panel-copy p {
+  margin: 7px 0 0;
+  color: rgb(49 70 79 / 74%);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.building-type-list {
+  display: grid;
+  gap: 12px;
+}
+
+.building-type-card {
+  display: grid;
+  grid-template-columns: 108px 1fr;
+  gap: 12px;
+  padding: 12px;
+  background: rgb(255 255 255 / 70%);
+  border: 2px solid rgb(65 93 104 / 12%);
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgb(31 70 86 / 8%);
+}
+
+.building-type-card.is-selected {
+  background: rgb(255 248 218 / 82%);
+  border-color: rgb(231 180 20 / 94%);
+}
+
+.building-model-preview {
+  grid-row: span 2;
+  height: 116px;
+  overflow: hidden;
+  background: linear-gradient(180deg, rgb(190 231 255 / 68%), rgb(132 190 100 / 52%));
+  border: 1px solid rgb(67 104 116 / 14%);
+  border-radius: 8px;
+}
+
+.building-type-card-copy {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.building-type-card-copy h3 {
+  margin: 0 0 4px;
+  color: rgb(15 31 38 / 94%);
+  font-size: 15px;
+  font-weight: 850;
+}
+
+.building-type-card-copy p {
+  margin: 0;
+  color: rgb(52 73 82 / 74%);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.building-type-card-copy strong {
+  color: rgb(17 32 38 / 94%);
+  font-size: 17px;
+  font-weight: 900;
+}
+
+.building-type-select,
+.building-primary-action,
+.building-secondary-action {
+  min-height: 42px;
+  border-radius: 8px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.building-type-select {
+  width: 100%;
+  color: rgb(22 38 45 / 90%);
+  background: white;
+  border: 1px solid rgb(55 82 94 / 18%);
+}
+
+.building-type-card.is-selected .building-type-select {
+  color: rgb(76 52 0 / 96%);
+  background: rgb(255 218 68 / 78%);
+  border-color: rgb(229 179 17 / 70%);
+}
+
+.building-primary-action {
+  width: 100%;
+  color: white;
+  background: rgb(23 39 46 / 96%);
+  border: 1px solid rgb(23 39 46 / 96%);
+  box-shadow: 0 12px 26px rgb(20 49 62 / 18%);
+}
+
+.building-primary-action:disabled,
+.building-secondary-action:disabled {
+  cursor: wait;
+  opacity: 0.68;
+}
+
+.building-secondary-action {
+  color: rgb(24 41 48 / 88%);
+  background: rgb(244 248 249 / 86%);
+  border: 1px solid rgb(55 82 94 / 16%);
+}
+
+.building-panel-actions {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: 10px;
+}
+
+.building-form-fields {
+  display: grid;
+  gap: 13px;
+}
+
+.building-form-fields label {
+  display: grid;
+  gap: 6px;
+}
+
+.building-form-fields span {
+  color: rgb(32 51 59 / 86%);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.building-form-fields input {
+  min-height: 44px;
+  width: 100%;
+  padding: 0 12px;
+  color: rgb(16 31 38 / 94%);
+  background: rgb(255 255 255 / 88%);
+  border: 1px solid rgb(58 86 98 / 18%);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 14px;
+}
+
+.building-form-fields small {
+  color: rgb(178 42 38 / 94%);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.building-order-summary {
+  display: grid;
+  gap: 9px;
+  padding: 12px;
+  background: rgb(242 247 248 / 78%);
+  border: 1px solid rgb(58 86 98 / 14%);
+  border-radius: 8px;
+}
+
+.building-order-summary div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.building-order-summary span {
+  color: rgb(55 76 85 / 70%);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.building-order-summary strong {
+  color: rgb(16 31 38 / 94%);
+  font-size: 13px;
+  font-weight: 850;
+  text-align: right;
+  word-break: break-word;
+}
+
+.building-success-message {
+  margin: 0;
+  padding: 11px 12px;
+  color: rgb(18 96 48 / 96%);
+  background: rgb(225 247 232 / 88%);
+  border: 1px solid rgb(54 164 92 / 24%);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.building-error-message,
+.building-load-error {
+  margin: 0;
+  padding: 11px 12px;
+  color: rgb(142 35 32 / 96%);
+  background: rgb(255 238 236 / 90%);
+  border: 1px solid rgb(198 64 54 / 24%);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.building-load-error {
+  position: absolute;
+  left: 16px;
+  top: max(16px, env(safe-area-inset-top));
+  z-index: 2;
+  max-width: min(340px, calc(100vw - 32px));
+  box-shadow: 0 12px 28px rgb(44 58 65 / 14%);
+}
+
+@keyframes building-panel-slide-in {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes building-sheet-slide-in {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes building-overlay-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 @media (max-width: 520px) {
   .reset-camera-button {
     right: auto;
@@ -165,5 +529,33 @@ body {
   .property-panel {
     top: 16px;
     bottom: auto;
+  }
+
+  .add-building-button {
+    right: 12px;
+    top: max(12px, env(safe-area-inset-top));
+  }
+
+  .add-building-panel {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    max-width: 100vw;
+    max-height: min(82dvh, 720px);
+    border-top: 1px solid rgb(60 90 103 / 16%);
+    border-left: 0;
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -18px 46px rgb(20 61 78 / 18%);
+    animation-name: building-sheet-slide-in;
+  }
+
+  .building-type-card {
+    grid-template-columns: 96px 1fr;
+  }
+
+  .building-model-preview {
+    height: 106px;
   }
 }

@@ -2,9 +2,10 @@
 
 import { ContactShadows, OrbitControls } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ComponentRef } from "react";
 import * as THREE from "three";
+import type { SavedBuilding } from "@/lib/buildings";
 import {
   SmallOfficeBuilding,
   type SmallOfficeBuildingProps,
@@ -17,6 +18,10 @@ import {
   SignalTower,
   type SignalTowerProps,
 } from "./component/SignalTower";
+import {
+  AddBuildingPanel,
+  type BuildingPreviewData,
+} from "./component/AddBuildingPanel";
 import { SkyBirds } from "./component/SkyBirds";
 
 const CAMERA_ELEVATION = THREE.MathUtils.degToRad(10);
@@ -86,6 +91,14 @@ type TreePlacement = {
   rotation: number;
   leaf: string;
   leafAccent: string;
+};
+
+type AddedBuilding = SavedBuilding;
+
+type CameraFocusRequest = {
+  id: string;
+  target: [number, number, number];
+  distance: number;
 };
 
 const TREE_PLACEMENTS: TreePlacement[] = [
@@ -449,7 +462,84 @@ function EdgeDecorations() {
   );
 }
 
-function FloatingIsland() {
+function getBuildingFocus(building: AddedBuilding): CameraFocusRequest {
+  if (building.buildingType === "tower") {
+    return {
+      id: building.id,
+      target: [building.position[0], 6.8, building.position[2]],
+      distance: 24,
+    };
+  }
+
+  if (building.buildingType === "office-building") {
+    return {
+      id: building.id,
+      target: [building.position[0], 5.4, building.position[2]],
+      distance: 18,
+    };
+  }
+
+  return {
+    id: building.id,
+    target: [building.position[0], 2.2, building.position[2]],
+    distance: 12,
+  };
+}
+
+function AddedWorldBuilding({ building }: { building: AddedBuilding }) {
+  const domainUrl = `https://${building.domain}`;
+  const commonProps = {
+    plotId: building.id,
+    name: building.companyName,
+    domain: building.domain,
+    domainUrl,
+  };
+
+  if (building.buildingType === "tower") {
+    return (
+      <SignalTower
+        {...commonProps}
+        price={`$${building.price}`}
+        position={building.position}
+        height={13.4}
+        baseWidth={7}
+        depth={5.5}
+      />
+    );
+  }
+
+  if (building.buildingType === "office-building") {
+    return (
+      <OfficeBuilding
+        {...commonProps}
+        price={`$${building.price}`}
+        position={building.position}
+        width={6.6}
+        height={10.2}
+        depth={4.2}
+        showLabels={false}
+      />
+    );
+  }
+
+  return (
+    <SmallOfficeBuilding
+      {...commonProps}
+      price={`$${building.price}`}
+      position={[building.position[0], 0.45, building.position[2]]}
+      width={4.2}
+      height={3.4}
+      depth={3.1}
+      primaryColor="#f3f0e7"
+    />
+  );
+}
+
+function FloatingIsland({
+  addedBuildings = [],
+}: {
+  addedBuildings?: AddedBuilding[];
+}) {
   return (
     <group>
       <WorldPlot />
@@ -460,6 +550,9 @@ function FloatingIsland() {
       <SmallOfficeBuilding {...SMALL_OFFICE_BUILDING} />
       <OfficeBuilding {...OFFICE_BUILDING} />
       <SignalTower {...SIGNAL_TOWER} />
+      {addedBuildings.map((building) => (
+        <AddedWorldBuilding key={building.id} building={building} />
+      ))}
     </group>
   );
 }
@@ -582,7 +675,7 @@ function getCameraFraming(aspect: number) {
   };
 }
 
-function CameraRig() {
+function CameraRig({ focusRequest }: { focusRequest: CameraFocusRequest | null }) {
   const { set, size } = useThree();
   const aspect = size.width / Math.max(size.height, 1);
   const framing = useMemo(() => getCameraFraming(aspect), [aspect]);
@@ -650,6 +743,28 @@ function CameraRig() {
     }
   }, [defaultTarget, fittedCamera, set]);
 
+  useLayoutEffect(() => {
+    if (!focusRequest) return;
+
+    const controls = controlsRef.current;
+    const focusTarget = new THREE.Vector3(...focusRequest.target);
+    const focusPosition = focusTarget
+      .clone()
+      .addScaledVector(CAMERA_VIEW_DIRECTION, focusRequest.distance);
+
+    fittedCamera.position.copy(focusPosition);
+    fittedCamera.lookAt(focusTarget);
+    fittedCamera.updateProjectionMatrix();
+    fittedCamera.updateMatrixWorld();
+
+    if (controls) {
+      controls.target.copy(focusTarget);
+      controls.object.position.copy(focusPosition);
+      controls.object.lookAt(focusTarget);
+      controls.update();
+    }
+  }, [fittedCamera, focusRequest]);
+
   return (
     <OrbitControls
       ref={controlsRef}
@@ -678,6 +793,70 @@ function CameraRig() {
 
 export function SceneCanvas() {
   const [resetToken, setResetToken] = useState(0);
+  const [addedBuildings, setAddedBuildings] = useState<AddedBuilding[]>([]);
+  const [focusRequest, setFocusRequest] = useState<CameraFocusRequest | null>(null);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadBuildings() {
+      try {
+        const response = await fetch("/api/buildings");
+        const payload = (await response.json()) as {
+          buildings?: AddedBuilding[];
+          error?: string;
+        };
+
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Could not load buildings.");
+        }
+
+        if (!cancelled) {
+          setAddedBuildings(payload.buildings ?? []);
+          setLoadError("");
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setLoadError(
+            error instanceof Error ? error.message : "Could not load saved buildings.",
+          );
+        }
+      }
+    }
+
+    loadBuildings();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const handleAddBuilding = async (data: BuildingPreviewData) => {
+    const response = await fetch("/api/buildings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        buildingType: data.buildingType,
+        companyName: data.companyName,
+        domain: data.domain,
+        logoUrl: data.logoUrl,
+      }),
+    });
+    const payload = (await response.json()) as {
+      building?: AddedBuilding;
+      error?: string;
+      errors?: Record<string, string>;
+    };
+
+    if (!response.ok || !payload.building) {
+      const fieldError = payload.errors ? Object.values(payload.errors)[0] : null;
+      throw new Error(fieldError ?? payload.error ?? "Could not add this building.");
+    }
+
+    setAddedBuildings((currentBuildings) => [...currentBuildings, payload.building as AddedBuilding]);
+    setFocusRequest(getBuildingFocus(payload.building));
+  };
 
   return (
     <div className="scene-stage">
@@ -707,7 +886,7 @@ export function SceneCanvas() {
           shadow-camera-near={1}
           shadow-camera-far={50}
         />
-        <FloatingIsland />
+        <FloatingIsland addedBuildings={addedBuildings} />
         <SkyBirds />
         <ContactShadows
           position={[0, -0.78, 0]}
@@ -717,15 +896,24 @@ export function SceneCanvas() {
           far={5}
           color="#7aa7bd"
         />
-        <CameraRig key={resetToken} />
+        <CameraRig key={resetToken} focusRequest={focusRequest} />
       </Canvas>
       <button
         className="reset-camera-button"
         type="button"
-        onClick={() => setResetToken((token) => token + 1)}
+        onClick={() => {
+          setFocusRequest(null);
+          setResetToken((token) => token + 1);
+        }}
       >
         Reset view
       </button>
+      <AddBuildingPanel onAddBuilding={handleAddBuilding} />
+      {loadError && (
+        <div className="building-load-error" role="status">
+          {loadError}
+        </div>
+      )}
     </div>
   );
 }
