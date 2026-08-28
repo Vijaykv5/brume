@@ -23,6 +23,7 @@ import {
   AddBuildingPanel,
   type BuildingPreviewData,
 } from "./component/AddBuildingPanel";
+import { AnalyticsStatsPill } from "./component/AnalyticsStatsPill";
 import { SkyBirds } from "./component/SkyBirds";
 
 const CAMERA_ELEVATION = THREE.MathUtils.degToRad(10);
@@ -927,6 +928,7 @@ export function SceneCanvas() {
       >
         Reset view
       </button>
+      <AnalyticsStatsPill />
       <AddBuildingPanel onAddBuilding={handleAddBuilding} />
       {loadError && (
         <div className="building-load-error" role="status">

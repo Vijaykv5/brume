@@ -88,6 +88,82 @@ body {
   outline-offset: 3px;
 }
 
+.analytics-stats-pill {
+  position: absolute;
+  top: max(18px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 2;
+  display: flex;
+  min-height: 54px;
+  max-width: calc(100vw - 32px);
+  align-items: center;
+  gap: 18px;
+  padding: 8px 20px 8px 8px;
+  color: rgb(30 48 61 / 94%);
+  background: rgb(255 255 255 / 78%);
+  border: 1px solid rgb(255 255 255 / 74%);
+  border-radius: 999px;
+  box-shadow:
+    0 18px 48px rgb(53 76 91 / 22%),
+    inset 0 1px 0 rgb(255 255 255 / 84%);
+  transform: translateX(-50%);
+  backdrop-filter: blur(18px) saturate(1.12);
+  pointer-events: none;
+}
+
+.analytics-stats-online {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 9px;
+  padding: 0 16px;
+  color: white;
+  background: linear-gradient(180deg, rgb(142 215 44 / 96%), rgb(72 170 12 / 98%));
+  border: 1px solid rgb(222 255 167 / 82%);
+  border-radius: 999px;
+  box-shadow:
+    0 10px 24px rgb(92 180 25 / 28%),
+    inset 0 1px 0 rgb(255 255 255 / 52%);
+  white-space: nowrap;
+}
+
+.analytics-stats-online span:first-child {
+  width: 12px;
+  height: 12px;
+  flex: 0 0 auto;
+  background: rgb(255 255 255 / 94%);
+  border-radius: 999px;
+  box-shadow: 0 0 0 5px rgb(255 255 255 / 16%);
+}
+
+.analytics-stats-online strong,
+.analytics-stats-views strong {
+  font-size: 24px;
+  font-weight: 900;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.analytics-stats-online span:last-child,
+.analytics-stats-views span {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.analytics-stats-views {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 9px;
+  white-space: nowrap;
+}
+
+.analytics-stats-views span {
+  color: rgb(38 54 67 / 84%);
+  font-weight: 650;
+}
+
 .property-panel {
   position: absolute;
   left: 16px;
@@ -534,6 +610,34 @@ body {
   .add-building-button {
     right: 12px;
     top: max(12px, env(safe-area-inset-top));
+  }
+
+  .analytics-stats-pill {
+    top: max(68px, calc(env(safe-area-inset-top) + 64px));
+    gap: 8px;
+    min-height: 44px;
+    padding: 6px 12px 6px 6px;
+  }
+
+  .analytics-stats-online {
+    min-height: 32px;
+    gap: 6px;
+    padding: 0 10px;
+  }
+
+  .analytics-stats-online span:first-child {
+    width: 9px;
+    height: 9px;
+  }
+
+  .analytics-stats-online strong,
+  .analytics-stats-views strong {
+    font-size: 16px;
+  }
+
+  .analytics-stats-online span:last-child,
+  .analytics-stats-views span {
+    font-size: 14px;
   }
 
   .add-building-panel {
