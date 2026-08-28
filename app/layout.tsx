@@ -3,7 +3,7 @@ import { GoogleAnalytics } from "./component/GoogleAnalytics";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "heyclicky - an ai buddy on your mac",
+  title: "Island city - an ai buddy on your mac",
   description: "Download heyclicky for Mac.",
 };
 
