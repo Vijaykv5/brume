@@ -5,11 +5,20 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ComponentRef } from "react";
 import * as THREE from "three";
-import { Building } from "./Building";
+import {
+  SmallOfficeBuilding,
+  type SmallOfficeBuildingProps,
+} from "./component/SmallOfficeBuilding";
+import {
+  OfficeBuilding,
+  type OfficeBuildingProps,
+} from "./component/OfficeBuilding";
+import {
+  SignalTower,
+  type SignalTowerProps,
+} from "./component/SignalTower";
+import { SkyBirds } from "./component/SkyBirds";
 
-const ISLAND_WIDTH = 24.5;
-const ISLAND_DEPTH = 14;
-const ISLAND_RADIUS = 2.1;
 const CAMERA_ELEVATION = THREE.MathUtils.degToRad(10);
 const CAMERA_AZIMUTH = THREE.MathUtils.degToRad(2);
 const CAMERA_VIEW_DIRECTION = new THREE.Vector3(
@@ -22,83 +31,169 @@ const ISLAND_BOUNDS = new THREE.Box3(
   new THREE.Vector3(11.1, 0.55, 7.35),
 );
 const BUILDING_BOUNDS = new THREE.Box3(
-  new THREE.Vector3(-7.3, 0.45, -4.35),
-  new THREE.Vector3(-3.1, 4.25, -1.25),
+  new THREE.Vector3(-9.3, 0.45, -2.65),
+  new THREE.Vector3(-5.1, 4.25, 0.45),
 );
-const PRICE_BADGE_CENTER = new THREE.Vector3(-3.77, 5, -2.8);
+const OFFICE_BUILDING_BOUNDS = new THREE.Box3(
+  new THREE.Vector3(-1.1, 0.56, -9.2),
+  new THREE.Vector3(5.5, 11.25, -5),
+);
+const SIGNAL_TOWER_BOUNDS = new THREE.Box3(
+  new THREE.Vector3(11.9, 0.46, 0.95),
+  new THREE.Vector3(18.9, 18.1, 6.45),
+);
+const PRICE_BADGE_CENTER = new THREE.Vector3(-5.77, 5, -0.55);
 const PRICE_BADGE_RADIUS = 0.68;
+const SMALL_OFFICE_BUILDING: SmallOfficeBuildingProps = {
+  plotId: "A1",
+  name: "google.com",
+  domain: "google.com",
+  price: "$1",
+  domainUrl: "https://google.com",
+  position: [-7.2, 0.45, -1.1],
+  width: 4.2,
+  height: 3.4,
+  depth: 3.1,
+  primaryColor: "#f3f0e7",
+};
+const OFFICE_BUILDING: OfficeBuildingProps = {
+  plotId: "A2",
+  name: "Hey, clicky",
+  domain: "heyclicky.com",
+  price: "$3",
+  domainUrl: "https://heyclicky.com",
+  position: [2.2, 0.56, -7.1],
+  width: 6.6,
+  height: 10.2,
+  depth: 4.2,
+  showLabels: false,
+};
+const SIGNAL_TOWER: SignalTowerProps = {
+  plotId: "A4",
+  name: "A4 Tower",
+  domain: "heyclicky.com",
+  price: "$5",
+  domainUrl: "https://heyclicky.com",
+  position: [15.4, 0.56, 3.7],
+  height: 13.4,
+  baseWidth: 7,
+  depth: 5.5,
+};
 
-function createRoundedIslandGeometry(width: number, depth: number, height: number) {
-  const x = -width / 2;
-  const y = -depth / 2;
-  const shape = new THREE.Shape();
+type TreePlacement = {
+  position: [number, number, number];
+  scale: number;
+  rotation: number;
+  leaf: string;
+  leafAccent: string;
+};
 
-  shape.moveTo(x + ISLAND_RADIUS, y);
-  shape.lineTo(x + width - ISLAND_RADIUS, y);
-  shape.quadraticCurveTo(x + width, y, x + width, y + ISLAND_RADIUS);
-  shape.lineTo(x + width, y + depth - ISLAND_RADIUS);
-  shape.quadraticCurveTo(x + width, y + depth, x + width - ISLAND_RADIUS, y + depth);
-  shape.lineTo(x + ISLAND_RADIUS, y + depth);
-  shape.quadraticCurveTo(x, y + depth, x, y + depth - ISLAND_RADIUS);
-  shape.lineTo(x, y + ISLAND_RADIUS);
-  shape.quadraticCurveTo(x, y, x + ISLAND_RADIUS, y);
+const TREE_PLACEMENTS: TreePlacement[] = [
+  {
+    position: [-24, 0.46, -18],
+    scale: 1.36,
+    rotation: -0.4,
+    leaf: "#86bf61",
+    leafAccent: "#c9e8a5",
+  },
+  {
+    position: [-17, 0.46, 16],
+    scale: 0.96,
+    rotation: 0.65,
+    leaf: "#5f9e48",
+    leafAccent: "#b9df8d",
+  },
+  {
+    position: [12, 0.46, -20],
+    scale: 1.16,
+    rotation: -0.55,
+    leaf: "#72ad50",
+    leafAccent: "#d2efad",
+  },
+  {
+    position: [24, 0.46, 15],
+    scale: 1.48,
+    rotation: -0.85,
+    leaf: "#6faf4d",
+    leafAccent: "#d8f0b4",
+  },
+  {
+    position: [34, 0.46, -8],
+    scale: 0.88,
+    rotation: 0.35,
+    leaf: "#5f9b46",
+    leafAccent: "#bae18d",
+  },
+  {
+    position: [-35, 0.46, 4],
+    scale: 1.08,
+    rotation: -0.35,
+    leaf: "#6cae4e",
+    leafAccent: "#d6f1af",
+  },
+  {
+    position: [-47, 0.46, -24],
+    scale: 0.92,
+    rotation: 0.45,
+    leaf: "#76b456",
+    leafAccent: "#c8eaa1",
+  },
+  {
+    position: [-42, 0.46, 27],
+    scale: 1.24,
+    rotation: -0.95,
+    leaf: "#5f9e48",
+    leafAccent: "#c1e596",
+  },
+  {
+    position: [-8, 0.46, 35],
+    scale: 0.86,
+    rotation: 0.2,
+    leaf: "#82bd5f",
+    leafAccent: "#d4efb0",
+  },
+  {
+    position: [18, 0.46, 36],
+    scale: 1.14,
+    rotation: 1.05,
+    leaf: "#6daa4e",
+    leafAccent: "#cdeba5",
+  },
+  {
+    position: [43, 0.46, 24],
+    scale: 0.98,
+    rotation: -0.25,
+    leaf: "#7eb95d",
+    leafAccent: "#d7f1b6",
+  },
+  {
+    position: [49, 0.46, -22],
+    scale: 1.32,
+    rotation: 0.72,
+    leaf: "#679f4a",
+    leafAccent: "#c5e89b",
+  },
+  {
+    position: [6, 0.46, -38],
+    scale: 0.8,
+    rotation: -0.7,
+    leaf: "#8ac466",
+    leafAccent: "#dcf3bb",
+  },
+];
 
-  const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: height,
-    bevelEnabled: true,
-    bevelSegments: 5,
-    bevelSize: 0.18,
-    bevelThickness: 0.12,
-    curveSegments: 12,
-    steps: 1,
-  });
-
-  geometry.translate(0, 0, -height / 2);
-  geometry.rotateX(-Math.PI / 2);
-  geometry.computeVertexNormals();
-
-  return geometry;
-}
-
-function IslandLayer({
-  height,
-  y,
-  topColor,
-  sideColor,
-}: {
-  height: number;
-  y: number;
-  topColor: string;
-  sideColor: string;
-}) {
-  const geometry = useMemo(
-    () => createRoundedIslandGeometry(ISLAND_WIDTH, ISLAND_DEPTH, height),
-    [height],
-  );
-  const materials = useMemo(
-    () => [
-      new THREE.MeshStandardMaterial({
-        color: topColor,
-        roughness: 0.86,
-        metalness: 0,
-      }),
-      new THREE.MeshStandardMaterial({
-        color: sideColor,
-        roughness: 0.92,
-        metalness: 0,
-      }),
-    ],
-    [sideColor, topColor],
-  );
-
+function WorldPlot() {
   return (
-    <mesh
-      castShadow
-      receiveShadow
-      geometry={geometry}
-      material={materials}
-      position={[0, y, 0]}
-    />
+    <group>
+      <mesh receiveShadow position={[0, 0.27, 0]}>
+        <cylinderGeometry args={[140, 140, 0.34, 96, 1, true]} />
+        <meshStandardMaterial color="#526d39" roughness={0.92} metalness={0} />
+      </mesh>
+      <mesh receiveShadow position={[0, 0.445, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <circleGeometry args={[140, 96]} />
+        <meshStandardMaterial color="#7fbe61" roughness={0.88} metalness={0} />
+      </mesh>
+    </group>
   );
 }
 
@@ -110,7 +205,7 @@ function GrassPatches() {
         [-4.6, -5.6, 1.3, 0.7, -0.35, "#76b85d"],
         [0.2, -5.7, 1.8, 0.8, 0.12, "#96d27c"],
         [4.9, -5.3, 1.5, 0.72, 0.5, "#80bf64"],
-        [7.9, -3.9, 1.4, 0.68, -0.25, "#9bd782"],
+        [10.2, -5.7, 1.4, 0.68, -0.25, "#9bd782"],
         [-8.4, 0.1, 1.5, 0.75, 0.4, "#7ebc62"],
         [8.2, 0.6, 1.7, 0.82, -0.42, "#91ce75"],
         [-7.0, 4.9, 1.6, 0.78, -0.1, "#93ce77"],
@@ -162,6 +257,58 @@ function GrassTuft({ position }: { position: [number, number, number] }) {
   );
 }
 
+function Tree({
+  position,
+  scale,
+  rotation,
+  leaf,
+  leafAccent,
+}: {
+  position: [number, number, number];
+  scale: number;
+  rotation: number;
+  leaf: string;
+  leafAccent: string;
+}) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]} scale={scale}>
+      <mesh castShadow receiveShadow position={[0, 0.48, 0]}>
+        <cylinderGeometry args={[0.18, 0.28, 0.96, 8]} />
+        <meshStandardMaterial color="#b98b58" roughness={0.86} />
+      </mesh>
+      <mesh castShadow position={[-0.2, 1.18, -0.02]} scale={[0.96, 0.78, 0.86]}>
+        <sphereGeometry args={[0.68, 18, 12]} />
+        <meshStandardMaterial color={leaf} roughness={0.82} />
+      </mesh>
+      <mesh castShadow position={[0.42, 1.06, 0.06]} scale={[0.88, 0.58, 0.72]}>
+        <sphereGeometry args={[0.62, 18, 12]} />
+        <meshStandardMaterial color={leafAccent} roughness={0.84} />
+      </mesh>
+      <mesh castShadow position={[-0.46, 1.02, 0.1]} scale={[0.58, 0.44, 0.5]}>
+        <sphereGeometry args={[0.56, 14, 10]} />
+        <meshStandardMaterial color="#579644" roughness={0.86} />
+      </mesh>
+    </group>
+  );
+}
+
+function RandomTrees() {
+  return (
+    <group>
+      {TREE_PLACEMENTS.map((tree) => (
+        <Tree
+          key={`${tree.position[0]}-${tree.position[2]}`}
+          position={tree.position}
+          scale={tree.scale}
+          rotation={tree.rotation}
+          leaf={tree.leaf}
+          leafAccent={tree.leafAccent}
+        />
+      ))}
+    </group>
+  );
+}
+
 function Rock({
   position,
   scale,
@@ -177,6 +324,113 @@ function Rock({
   );
 }
 
+function SoilPatch({
+  position,
+  scale,
+  rotation = 0,
+}: {
+  position: [number, number, number];
+  scale: [number, number];
+  rotation?: number;
+}) {
+  return (
+    <mesh
+      receiveShadow
+      position={position}
+      rotation={[-Math.PI / 2, 0, rotation]}
+      scale={[scale[0], scale[1], 1]}
+    >
+      <circleGeometry args={[1, 11]} />
+      <meshStandardMaterial color="#795434" roughness={0.98} />
+    </mesh>
+  );
+}
+
+function FallenTrunk({
+  position,
+  rotation,
+  scale,
+}: {
+  position: [number, number, number];
+  rotation: number;
+  scale: number;
+}) {
+  return (
+    <group position={position} rotation={[0, rotation, 0]} scale={scale}>
+      <mesh castShadow receiveShadow rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.2, 0.28, 1.8, 7]} />
+        <meshStandardMaterial color="#68452e" roughness={0.95} />
+      </mesh>
+      <mesh castShadow position={[-0.43, 0.1, 0]} rotation={[0, 0, -Math.PI / 3]}>
+        <cylinderGeometry args={[0.08, 0.13, 0.75, 6]} />
+        <meshStandardMaterial color="#795136" roughness={0.96} />
+      </mesh>
+    </group>
+  );
+}
+
+function Mushroom({
+  position,
+  color,
+  scale,
+}: {
+  position: [number, number, number];
+  color: string;
+  scale: number;
+}) {
+  return (
+    <group position={position} scale={scale}>
+      <mesh castShadow position={[0, 0.2, 0]}>
+        <cylinderGeometry args={[0.07, 0.1, 0.4, 8]} />
+        <meshStandardMaterial color="#eee0bf" roughness={0.9} />
+      </mesh>
+      <mesh castShadow position={[0, 0.42, 0]} scale={[1, 0.5, 1]}>
+        <sphereGeometry args={[0.24, 12, 8]} />
+        <meshStandardMaterial color={color} roughness={0.8} />
+      </mesh>
+    </group>
+  );
+}
+
+function WorldDetails() {
+  return (
+    <group position={[0, 0.46, 0]}>
+      <SoilPatch position={[16, 0.02, -14]} scale={[2.1, 1.1]} rotation={0.3} />
+      <SoilPatch position={[-20, 0.02, 8]} scale={[1.6, 0.9]} rotation={-0.45} />
+
+      <Rock position={[16, 0.12, -13]} scale={0.5} />
+      <Rock position={[18.2, 0.1, -15]} scale={0.32} />
+      <Rock position={[-21, 0.1, 9.2]} scale={0.42} />
+      <Rock position={[20.5, 0.11, 11.8]} scale={0.58} />
+      <Rock position={[-15.5, 0.1, 16]} scale={0.34} />
+      <Rock position={[27, 0.1, 8.8]} scale={0.46} />
+      <Rock position={[-45, 0.1, -18]} scale={0.5} />
+      <Rock position={[-38, 0.09, 30]} scale={0.34} />
+      <Rock position={[-4, 0.1, 39]} scale={0.42} />
+      <Rock position={[25, 0.09, 34]} scale={0.3} />
+      <Rock position={[46, 0.12, 19]} scale={0.62} />
+      <Rock position={[53, 0.09, -26]} scale={0.36} />
+      <Rock position={[10, 0.1, -42]} scale={0.44} />
+      <Rock position={[-30, 0.1, -34]} scale={0.28} />
+
+      <FallenTrunk position={[18, 0.22, -5]} rotation={0.55} scale={1.1} />
+      <FallenTrunk position={[-19, 0.2, -10]} rotation={-0.8} scale={0.85} />
+      <FallenTrunk position={[27, 0.2, 8]} rotation={1.1} scale={0.9} />
+      <FallenTrunk position={[-27, 0.2, 4]} rotation={-0.2} scale={1.05} />
+      <FallenTrunk position={[-44, 0.2, 22]} rotation={0.4} scale={0.92} />
+      <FallenTrunk position={[-24, 0.2, -31]} rotation={-1.15} scale={0.78} />
+      <FallenTrunk position={[34, 0.2, 30]} rotation={0.95} scale={0.88} />
+      <FallenTrunk position={[48, 0.2, -18]} rotation={-0.55} scale={1.0} />
+      <FallenTrunk position={[4, 0.2, 42]} rotation={1.35} scale={0.72} />
+
+      <Mushroom position={[14, 0, -6]} color="#c75b46" scale={1.1} />
+      <Mushroom position={[15, 0, -5.2]} color="#d8944e" scale={0.8} />
+      <Mushroom position={[-18, 0, 14]} color="#c76b56" scale={0.95} />
+      <Mushroom position={[26, 0, -15]} color="#d57b5f" scale={0.9} />
+    </group>
+  );
+}
+
 function EdgeDecorations() {
   return (
     <group position={[0, 0.46, 0]}>
@@ -184,7 +438,7 @@ function EdgeDecorations() {
       <GrassTuft position={[-6.2, 0, 5.0]} />
       <GrassTuft position={[-1.8, 0, -5.7]} />
       <GrassTuft position={[4.8, 0, 5.2]} />
-      <GrassTuft position={[8.2, 0, -2.4]} />
+      <GrassTuft position={[9.6, 0, -0.7]} />
       <GrassTuft position={[7.4, 0, 3.7]} />
 
       <Rock position={[-7.9, 0.12, 2.2]} scale={0.75} />
@@ -198,21 +452,14 @@ function EdgeDecorations() {
 function FloatingIsland() {
   return (
     <group>
-      <IslandLayer height={0.62} y={-0.09} topColor="#526d39" sideColor="#526d39" />
-      <IslandLayer height={0.12} y={0.28} topColor="#8a5a31" sideColor="#8a5a31" />
-      <IslandLayer height={0.08} y={0.38} topColor="#7fbe61" sideColor="#6cab52" />
+      <WorldPlot />
       <GrassPatches />
+      <RandomTrees />
       <EdgeDecorations />
-      <Building
-        domain="google.com"
-        price="$1"
-        position={[-5.2, 0.45, -2.8]}
-        width={4.2}
-        height={3.4}
-        depth={3.1}
-        primaryColor="#f3f0e7"
-        logoUrl=""
-      />
+      <WorldDetails />
+      <SmallOfficeBuilding {...SMALL_OFFICE_BUILDING} />
+      <OfficeBuilding {...OFFICE_BUILDING} />
+      <SignalTower {...SIGNAL_TOWER} />
     </group>
   );
 }
@@ -239,6 +486,8 @@ function getVisibleScenePoints(right: THREE.Vector3, cameraUp: THREE.Vector3) {
   return [
     ...getBoundsCorners(ISLAND_BOUNDS),
     ...getBoundsCorners(BUILDING_BOUNDS),
+    ...getBoundsCorners(OFFICE_BUILDING_BOUNDS),
+    ...getBoundsCorners(SIGNAL_TOWER_BOUNDS),
     ...badgeCorners,
   ];
 }
@@ -325,6 +574,7 @@ function getCameraFraming(aspect: number) {
 
   return {
     fov,
+    distance,
     position: position.toArray() as [number, number, number],
     target: target.toArray() as [number, number, number],
     minTargetY: target.y - 0.7,
@@ -359,22 +609,33 @@ function CameraRig() {
     const controls = controlsRef.current;
     if (!controls || correctingMovement.current) return;
 
+    const horizontalRange = 24;
+    const constrainedX = THREE.MathUtils.clamp(
+      controls.target.x,
+      defaultTarget.x - horizontalRange,
+      defaultTarget.x + horizontalRange,
+    );
     const constrainedY = THREE.MathUtils.clamp(
       controls.target.y,
       framing.minTargetY,
       framing.maxTargetY,
     );
+    const constrainedZ = THREE.MathUtils.clamp(
+      controls.target.z,
+      defaultTarget.z - horizontalRange,
+      defaultTarget.z + horizontalRange,
+    );
     const correction = new THREE.Vector3(
-      controls.target.x - defaultTarget.x,
+      controls.target.x - constrainedX,
       controls.target.y - constrainedY,
-      controls.target.z - defaultTarget.z,
+      controls.target.z - constrainedZ,
     );
 
     if (correction.lengthSq() < 0.000001) return;
 
     correctingMovement.current = true;
     controls.object.position.sub(correction);
-    controls.target.set(defaultTarget.x, constrainedY, defaultTarget.z);
+    controls.target.set(constrainedX, constrainedY, constrainedZ);
     controls.object.lookAt(controls.target);
     correctingMovement.current = false;
   }, [defaultTarget, framing.maxTargetY, framing.minTargetY]);
@@ -396,7 +657,10 @@ function CameraRig() {
       enableDamping={false}
       enablePan
       enableRotate
-      enableZoom={false}
+      enableZoom
+      zoomToCursor
+      minDistance={Math.max(8, framing.distance * 0.42)}
+      maxDistance={framing.distance * 1.8}
       minPolarAngle={0.35}
       maxPolarAngle={Math.PI / 2.25}
       screenSpacePanning
@@ -405,7 +669,7 @@ function CameraRig() {
         MIDDLE: THREE.MOUSE.PAN,
         RIGHT: THREE.MOUSE.PAN,
       }}
-      touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.PAN }}
+      touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
       target={framing.target}
       onChange={constrainMovement}
     />
@@ -444,6 +708,7 @@ export function SceneCanvas() {
           shadow-camera-far={50}
         />
         <FloatingIsland />
+        <SkyBirds />
         <ContactShadows
           position={[0, -0.78, 0]}
           opacity={0.18}
@@ -459,7 +724,7 @@ export function SceneCanvas() {
         type="button"
         onClick={() => setResetToken((token) => token + 1)}
       >
-        Reset camera
+        Reset view
       </button>
     </div>
   );

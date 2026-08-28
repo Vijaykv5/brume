@@ -1,9 +1,9 @@
 "use client";
 
-import { Billboard } from "@react-three/drei";
-import type { ThreeElements } from "@react-three/fiber";
-import { useEffect, useMemo } from "react";
+import type { ThreeElements, ThreeEvent } from "@react-three/fiber";
+import { useEffect, useMemo, useState } from "react";
 import * as THREE from "three";
+import { BuildingBadge } from "./BuildingBadge";
 
 const WINDOW_COLOR = "#a9dbed";
 const WINDOW_FRAME_COLOR = "#d8ddd8";
@@ -11,7 +11,8 @@ const ENTRANCE_COLOR = "#26383d";
 const ROOF_COLOR = "#ece9df";
 const SIGN_COLOR = "#34454a";
 
-export type BuildingProps = {
+export type SmallOfficeBuildingProps = {
+  plotId: string;
   domain: string;
   price: string;
   position: [number, number, number];
@@ -19,7 +20,9 @@ export type BuildingProps = {
   height: number;
   depth: number;
   primaryColor: string;
-  logoUrl: string;
+  logoUrl?: string;
+  name?: string;
+  domainUrl?: string;
 };
 
 function Window({
@@ -92,7 +95,14 @@ function TextLabel({
   );
 }
 
-export function Building({
+function getDomainUrl(domain: string, domainUrl?: string) {
+  const target = domainUrl?.trim() || domain.trim();
+  if (!target) return "";
+  return /^https?:\/\//i.test(target) ? target : `https://${target}`;
+}
+
+export function SmallOfficeBuilding({
+  plotId,
   domain,
   price,
   position,
@@ -100,8 +110,11 @@ export function Building({
   height,
   depth,
   primaryColor,
-  logoUrl,
-}: BuildingProps) {
+  logoUrl = "",
+  name,
+  domainUrl,
+}: SmallOfficeBuildingProps) {
+  const [hovered, setHovered] = useState(false);
   const floorHeight = height / 2;
   const frontZ = depth / 2 + 0.045;
   const sideX = width / 2 + 0.045;
@@ -110,9 +123,46 @@ export function Building({
   const windowWidth = width * 0.2;
   const windowHeight = floorHeight * 0.42;
   const sideWindowWidth = depth * 0.2;
+  const buildingUrl = getDomainUrl(domain, domainUrl);
+
+  useEffect(() => {
+    if (!hovered || !buildingUrl) return;
+
+    document.body.style.cursor = "pointer";
+    return () => {
+      document.body.style.cursor = "";
+    };
+  }, [buildingUrl, hovered]);
+
+  const handlePointerOver = (event: ThreeEvent<PointerEvent>) => {
+    if (!buildingUrl) return;
+
+    event.stopPropagation();
+    setHovered(true);
+  };
+
+  const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
+    if (!buildingUrl) return;
+
+    event.stopPropagation();
+    setHovered(false);
+  };
+
+  const handleClick = (event: ThreeEvent<MouseEvent>) => {
+    if (!buildingUrl) return;
+
+    event.stopPropagation();
+    window.open(buildingUrl, "_blank", "noopener,noreferrer");
+  };
 
   return (
-    <group position={position} userData={{ domain, price, logoUrl }}>
+    <group
+      position={position}
+      userData={{ plotId, domain, price, logoUrl }}
+      onPointerOver={handlePointerOver}
+      onPointerOut={handlePointerOut}
+      onClick={handleClick}
+    >
       <mesh castShadow receiveShadow position={[0, height / 2, 0]}>
         <boxGeometry args={[width, height, depth]} />
         <meshStandardMaterial color={primaryColor} roughness={0.82} />
@@ -188,19 +238,14 @@ export function Building({
         </group>
       </group>
 
-      <Billboard position={[width * 0.34, height + 1.15, 0]} follow>
-        <mesh castShadow>
-          <circleGeometry args={[0.66, 24]} />
-          <meshStandardMaterial color={SIGN_COLOR} roughness={0.78} />
-        </mesh>
-        <mesh position={[0, 0, 0.025]}>
-          <circleGeometry args={[0.58, 24]} />
-          <meshStandardMaterial color="#ffffff" roughness={0.7} />
-        </mesh>
-        <group position={[0, 0, 0.05]}>
-          <TextLabel text={price} width={0.84} height={0.42} />
-        </group>
-      </Billboard>
+      <group position={[width * 0.34, height + 1.08, depth * 0.18]}>
+        <BuildingBadge
+          title={name ?? domain}
+          subtitle={price}
+          width={2.35}
+          height={0.82}
+        />
+      </group>
     </group>
   );
 }
