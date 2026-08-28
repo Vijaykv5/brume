@@ -13,9 +13,9 @@ export async function ensureBuildingsTable() {
     create table if not exists buildings (
       id uuid primary key,
       building_type text not null check (
-        building_type in ('small-office', 'office-building', 'tower')
+        building_type in ('billboard', 'small-office', 'office-building', 'tower')
       ),
-      price_cents integer not null check (price_cents in (200, 300, 400)),
+      price_cents integer not null check (price_cents in (100, 200, 300, 400)),
       company_name text not null,
       domain text not null,
       logo_url text,
@@ -31,5 +31,27 @@ export async function ensureBuildingsTable() {
   await sql`
     create index if not exists buildings_status_created_at_idx
     on buildings (status, created_at desc)
+  `;
+
+  await sql`
+    alter table buildings
+    drop constraint if exists buildings_building_type_check
+  `;
+
+  await sql`
+    alter table buildings
+    add constraint buildings_building_type_check
+    check (building_type in ('billboard', 'small-office', 'office-building', 'tower'))
+  `;
+
+  await sql`
+    alter table buildings
+    drop constraint if exists buildings_price_cents_check
+  `;
+
+  await sql`
+    alter table buildings
+    add constraint buildings_price_cents_check
+    check (price_cents in (100, 200, 300, 400))
   `;
 }

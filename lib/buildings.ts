@@ -1,10 +1,10 @@
-export type BuildingType = "small-office" | "office-building" | "tower";
+export type BuildingType = "billboard" | "small-office" | "office-building" | "tower";
 
 export type BuildingOption = {
   id: BuildingType;
   name: string;
-  price: 2 | 3 | 4;
-  priceCents: 200 | 300 | 400;
+  price: 1 | 2 | 3 | 4;
+  priceCents: 100 | 200 | 300 | 400;
   description: string;
 };
 
@@ -16,12 +16,12 @@ export type BuildingSubmission = {
 };
 
 export type BuildingFormData = BuildingSubmission & {
-  price: 2 | 3 | 4;
+  price: 1 | 2 | 3 | 4;
 };
 
 export type SavedBuilding = BuildingFormData & {
   id: string;
-  priceCents: 200 | 300 | 400;
+  priceCents: 100 | 200 | 300 | 400;
   position: [number, number, number];
   status: "active" | "hidden";
   createdAt: string;
@@ -38,6 +38,13 @@ export type BuildingFootprint = {
 };
 
 export const BUILDING_OPTIONS: BuildingOption[] = [
+  {
+    id: "billboard",
+    name: "Billboard",
+    price: 1,
+    priceCents: 100,
+    description: "A small sign spot for simple visibility.",
+  },
   {
     id: "small-office",
     name: "Small Office",
@@ -76,11 +83,7 @@ export const ADDED_BUILDING_SPOTS: [number, number][] = [
   [-9, -26],
 ];
 
-export const EXISTING_BUILDING_FOOTPRINTS: BuildingFootprint[] = [
-  { position: [-7.2, 0.45, -1.1], radius: 4.4 },
-  { position: [2.2, 0.56, -7.1], radius: 6.4 },
-  { position: [15.4, 0.56, 3.7], radius: 6.9 },
-];
+export const EXISTING_BUILDING_FOOTPRINTS: BuildingFootprint[] = [];
 
 export function getBuildingOption(buildingType: BuildingType | null | undefined) {
   return BUILDING_OPTIONS.find((option) => option.id === buildingType) ?? null;
@@ -106,10 +109,12 @@ export function isValidDomain(domain: string) {
 export function getBuildingRadius(buildingType: BuildingType) {
   if (buildingType === "tower") return 7.2;
   if (buildingType === "office-building") return 6.5;
+  if (buildingType === "billboard") return 2.6;
   return 4.4;
 }
 
 export function getBuildingGroundY(buildingType: BuildingType) {
+  if (buildingType === "billboard") return 0.48;
   return buildingType === "small-office" ? 0.45 : 0.56;
 }
 

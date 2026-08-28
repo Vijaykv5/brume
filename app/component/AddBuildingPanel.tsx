@@ -14,6 +14,7 @@ import {
 import { OfficeBuilding } from "./OfficeBuilding";
 import { SignalTower } from "./SignalTower";
 import { SmallOfficeBuilding } from "./SmallOfficeBuilding";
+import { WebsiteBillboard } from "./WebsiteBillboard";
 
 type Step = "choose" | "details";
 
@@ -37,6 +38,19 @@ function MiniBuildingPreview({ type }: { type: BuildingType }) {
         <ambientLight intensity={1.8} />
         <directionalLight intensity={2.2} position={[-6, 8, 6]} />
         <group rotation={[0, -0.45, 0]}>
+          {type === "billboard" && (
+            <WebsiteBillboard
+              plotId="B1"
+              name="Billboard"
+              domain="preview.com"
+              price="$1"
+              position={[0, -1.4, 0]}
+              width={3.2}
+              height={1.35}
+              poleHeight={2.2}
+              clickable={false}
+            />
+          )}
           {type === "small-office" && (
             <SmallOfficeBuilding
               plotId="A1"

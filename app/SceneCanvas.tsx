@@ -18,6 +18,7 @@ import {
   SignalTower,
   type SignalTowerProps,
 } from "./component/SignalTower";
+import { WebsiteBillboard } from "./component/WebsiteBillboard";
 import {
   AddBuildingPanel,
   type BuildingPreviewData,
@@ -463,6 +464,14 @@ function EdgeDecorations() {
 }
 
 function getBuildingFocus(building: AddedBuilding): CameraFocusRequest {
+  if (building.buildingType === "billboard") {
+    return {
+      id: building.id,
+      target: [building.position[0], 2.2, building.position[2]],
+      distance: 10,
+    };
+  }
+
   if (building.buildingType === "tower") {
     return {
       id: building.id,
@@ -494,6 +503,16 @@ function AddedWorldBuilding({ building }: { building: AddedBuilding }) {
     domain: building.domain,
     domainUrl,
   };
+
+  if (building.buildingType === "billboard") {
+    return (
+      <WebsiteBillboard
+        {...commonProps}
+        price={`$${building.price}`}
+        position={[building.position[0], 0.48, building.position[2]]}
+      />
+    );
+  }
 
   if (building.buildingType === "tower") {
     return (
