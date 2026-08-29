@@ -20,6 +20,7 @@ type BuildingRow = {
   position_x: string | number;
   position_y: string | number;
   position_z: string | number;
+  click_count?: string | number | null;
   status: "active" | "hidden";
   created_at: string | Date;
   updated_at: string | Date;
@@ -42,6 +43,7 @@ function rowToBuilding(row: BuildingRow): SavedBuilding {
       Number(row.position_y),
       Number(row.position_z),
     ],
+    clickCount: Number(row.click_count ?? 0),
     status: row.status,
     createdAt: new Date(row.created_at).toISOString(),
     updatedAt: new Date(row.updated_at).toISOString(),
@@ -61,6 +63,7 @@ async function loadActiveBuildings() {
       position_x,
       position_y,
       position_z,
+      click_count,
       status,
       created_at,
       updated_at
@@ -72,13 +75,21 @@ async function loadActiveBuildings() {
   return (rows as BuildingRow[]).map(rowToBuilding);
 }
 
+function normalizeSavedBuilding(building: SavedBuilding): SavedBuilding {
+  return {
+    ...building,
+    clickCount: Number(building.clickCount ?? 0),
+  };
+}
+
 export async function GET() {
   try {
     const cachedBuildings = await getCachedBuildings();
 
     if (cachedBuildings) {
+      const buildings = cachedBuildings.map(normalizeSavedBuilding);
       return NextResponse.json(
-        { buildings: cachedBuildings },
+        { buildings },
         { headers: { "x-buildings-source": "redis" } },
       );
     }
@@ -165,6 +176,7 @@ export async function POST(request: Request) {
         position_x,
         position_y,
         position_z,
+        click_count,
         status,
         created_at,
         updated_at

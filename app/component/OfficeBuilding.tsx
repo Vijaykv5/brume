@@ -28,6 +28,8 @@ export type OfficeBuildingProps = {
   name?: string;
   domainUrl?: string;
   clickable?: boolean;
+  onHoverChange?: (hovered: boolean) => void;
+  onVisit?: () => void;
 };
 
 function TextLabel({
@@ -157,6 +159,8 @@ export function OfficeBuilding({
   name,
   domainUrl,
   clickable = true,
+  onHoverChange,
+  onVisit,
 }: OfficeBuildingProps) {
   const [hovered, setHovered] = useState(false);
   const frontZ = depth / 2 + 0.045;
@@ -187,6 +191,7 @@ export function OfficeBuilding({
 
     event.stopPropagation();
     setHovered(true);
+    onHoverChange?.(true);
   };
 
   const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
@@ -194,12 +199,14 @@ export function OfficeBuilding({
 
     event.stopPropagation();
     setHovered(false);
+    onHoverChange?.(false);
   };
 
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
     if (!buildingUrl) return;
 
     event.stopPropagation();
+    onVisit?.();
     window.open(buildingUrl, "_blank", "noopener,noreferrer");
   };
 

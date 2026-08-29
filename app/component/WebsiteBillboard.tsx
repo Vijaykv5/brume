@@ -24,6 +24,8 @@ export type WebsiteBillboardProps = {
   domainUrl?: string;
   logoUrl?: string;
   clickable?: boolean;
+  onHoverChange?: (hovered: boolean) => void;
+  onVisit?: () => void;
 };
 
 function getDomainUrl(domain: string, domainUrl?: string) {
@@ -162,6 +164,8 @@ export function WebsiteBillboard({
   domainUrl,
   logoUrl = "",
   clickable = true,
+  onHoverChange,
+  onVisit,
 }: WebsiteBillboardProps) {
   const [hovered, setHovered] = useState(false);
   const buildingUrl = clickable ? getDomainUrl(domain, domainUrl) : "";
@@ -183,6 +187,7 @@ export function WebsiteBillboard({
 
     event.stopPropagation();
     setHovered(true);
+    onHoverChange?.(true);
   };
 
   const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
@@ -190,12 +195,14 @@ export function WebsiteBillboard({
 
     event.stopPropagation();
     setHovered(false);
+    onHoverChange?.(false);
   };
 
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
     if (!buildingUrl) return;
 
     event.stopPropagation();
+    onVisit?.();
     window.open(buildingUrl, "_blank", "noopener,noreferrer");
   };
 

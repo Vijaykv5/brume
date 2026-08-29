@@ -10,6 +10,7 @@ create table if not exists buildings (
   position_x numeric not null,
   position_y numeric not null,
   position_z numeric not null,
+  click_count integer not null default 0,
   status text not null default 'active' check (status in ('active', 'hidden')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()

@@ -23,6 +23,7 @@ export type SavedBuilding = BuildingFormData & {
   id: string;
   priceCents: 100 | 200 | 300 | 400;
   position: [number, number, number];
+  clickCount: number;
   status: "active" | "hidden";
   createdAt: string;
   updatedAt: string;

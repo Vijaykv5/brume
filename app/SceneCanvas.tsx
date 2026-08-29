@@ -24,6 +24,10 @@ import {
   type BuildingPreviewData,
 } from "./component/AddBuildingPanel";
 import { AnalyticsStatsPill } from "./component/AnalyticsStatsPill";
+import {
+  BuildingHoverCard,
+  type BuildingHoverCardData,
+} from "./component/BuildingHoverCard";
 import { SkyBirds } from "./component/SkyBirds";
 
 const CAMERA_ELEVATION = THREE.MathUtils.degToRad(10);
@@ -63,6 +67,12 @@ const SMALL_OFFICE_BUILDING: SmallOfficeBuildingProps = {
   depth: 3.1,
   primaryColor: "#f3f0e7",
 };
+const STATIC_SMALL_OFFICE_HOVER: BuildingHoverCardData = {
+  id: "static-google",
+  name: "google.com",
+  domain: "google.com",
+  clickCount: 0,
+};
 const OFFICE_BUILDING: OfficeBuildingProps = {
   plotId: "A2",
   name: "Hey, clicky",
@@ -75,6 +85,12 @@ const OFFICE_BUILDING: OfficeBuildingProps = {
   depth: 4.2,
   showLabels: false,
 };
+const STATIC_OFFICE_HOVER: BuildingHoverCardData = {
+  id: "static-heyclicky",
+  name: "Hey, clicky",
+  domain: "heyclicky.com",
+  clickCount: 0,
+};
 const SIGNAL_TOWER: SignalTowerProps = {
   plotId: "A4",
   name: "A4 Tower",
@@ -85,6 +101,12 @@ const SIGNAL_TOWER: SignalTowerProps = {
   height: 13.4,
   baseWidth: 7,
   depth: 5.5,
+};
+const STATIC_TOWER_HOVER: BuildingHoverCardData = {
+  id: "static-tower",
+  name: "A4 Tower",
+  domain: "heyclicky.com",
+  clickCount: 0,
 };
 
 type TreePlacement = {
@@ -496,13 +518,30 @@ function getBuildingFocus(building: AddedBuilding): CameraFocusRequest {
   };
 }
 
-function AddedWorldBuilding({ building }: { building: AddedBuilding }) {
+function AddedWorldBuilding({
+  building,
+  onHoverBuilding,
+  onVisitBuilding,
+}: {
+  building: AddedBuilding;
+  onHoverBuilding: (building: BuildingHoverCardData | null) => void;
+  onVisitBuilding: (buildingId: string) => void;
+}) {
   const domainUrl = `https://${building.domain}`;
+  const hoverData: BuildingHoverCardData = {
+    id: building.id,
+    name: building.companyName,
+    domain: building.domain,
+    clickCount: building.clickCount,
+    logoUrl: building.logoUrl,
+  };
   const commonProps = {
     plotId: building.id,
     name: building.companyName,
     domain: building.domain,
     domainUrl,
+    onHoverChange: (hovered: boolean) => onHoverBuilding(hovered ? hoverData : null),
+    onVisit: () => onVisitBuilding(building.id),
   };
 
   if (building.buildingType === "billboard") {
@@ -557,9 +596,15 @@ function AddedWorldBuilding({ building }: { building: AddedBuilding }) {
 
 function FloatingIsland({
   addedBuildings = [],
+  onHoverBuilding,
+  onVisitBuilding,
 }: {
   addedBuildings?: AddedBuilding[];
+  onHoverBuilding: (building: BuildingHoverCardData | null) => void;
+  onVisitBuilding: (buildingId: string) => void;
 }) {
+  const staticVisit = () => undefined;
+
   return (
     <group>
       <WorldPlot />
@@ -567,11 +612,34 @@ function FloatingIsland({
       <RandomTrees />
       <EdgeDecorations />
       <WorldDetails />
-      <SmallOfficeBuilding {...SMALL_OFFICE_BUILDING} />
-      <OfficeBuilding {...OFFICE_BUILDING} />
-      <SignalTower {...SIGNAL_TOWER} />
+      <SmallOfficeBuilding
+        {...SMALL_OFFICE_BUILDING}
+        onHoverChange={(hovered) =>
+          onHoverBuilding(hovered ? STATIC_SMALL_OFFICE_HOVER : null)
+        }
+        onVisit={staticVisit}
+      />
+      <OfficeBuilding
+        {...OFFICE_BUILDING}
+        onHoverChange={(hovered) =>
+          onHoverBuilding(hovered ? STATIC_OFFICE_HOVER : null)
+        }
+        onVisit={staticVisit}
+      />
+      <SignalTower
+        {...SIGNAL_TOWER}
+        onHoverChange={(hovered) =>
+          onHoverBuilding(hovered ? STATIC_TOWER_HOVER : null)
+        }
+        onVisit={staticVisit}
+      />
       {addedBuildings.map((building) => (
-        <AddedWorldBuilding key={building.id} building={building} />
+        <AddedWorldBuilding
+          key={building.id}
+          building={building}
+          onHoverBuilding={onHoverBuilding}
+          onVisitBuilding={onVisitBuilding}
+        />
       ))}
     </group>
   );
@@ -814,6 +882,7 @@ function CameraRig({ focusRequest }: { focusRequest: CameraFocusRequest | null }
 export function SceneCanvas() {
   const [resetToken, setResetToken] = useState(0);
   const [addedBuildings, setAddedBuildings] = useState<AddedBuilding[]>([]);
+  const [hoveredBuilding, setHoveredBuilding] = useState<BuildingHoverCardData | null>(null);
   const [focusRequest, setFocusRequest] = useState<CameraFocusRequest | null>(null);
   const [loadError, setLoadError] = useState("");
 
@@ -878,6 +947,55 @@ export function SceneCanvas() {
     setFocusRequest(getBuildingFocus(payload.building));
   };
 
+  const handleVisitBuilding = async (buildingId: string) => {
+    const updateLocalClickCount = (delta: number) => {
+      setAddedBuildings((currentBuildings) =>
+        currentBuildings.map((building) =>
+          building.id === buildingId
+            ? { ...building, clickCount: Math.max(0, building.clickCount + delta) }
+            : building,
+        ),
+      );
+      setHoveredBuilding((currentBuilding) =>
+        currentBuilding?.id === buildingId
+          ? { ...currentBuilding, clickCount: Math.max(0, currentBuilding.clickCount + delta) }
+          : currentBuilding,
+      );
+    };
+
+    const syncClickCount = (clickCount: number) => {
+      setAddedBuildings((currentBuildings) =>
+        currentBuildings.map((building) =>
+          building.id === buildingId ? { ...building, clickCount } : building,
+        ),
+      );
+      setHoveredBuilding((currentBuilding) =>
+        currentBuilding?.id === buildingId
+          ? { ...currentBuilding, clickCount }
+          : currentBuilding,
+      );
+    };
+
+    updateLocalClickCount(1);
+
+    try {
+      const response = await fetch(`/api/buildings/${buildingId}/click`, {
+        method: "POST",
+      });
+      const payload = (await response.json()) as {
+        clickCount?: number;
+      };
+
+      if (!response.ok || typeof payload.clickCount !== "number") {
+        throw new Error("Could not track this click.");
+      }
+
+      syncClickCount(payload.clickCount);
+    } catch {
+      updateLocalClickCount(-1);
+    }
+  };
+
   return (
     <div className="scene-stage">
       <Canvas
@@ -906,7 +1024,11 @@ export function SceneCanvas() {
           shadow-camera-near={1}
           shadow-camera-far={50}
         />
-        <FloatingIsland addedBuildings={addedBuildings} />
+        <FloatingIsland
+          addedBuildings={addedBuildings}
+          onHoverBuilding={setHoveredBuilding}
+          onVisitBuilding={handleVisitBuilding}
+        />
         <SkyBirds />
         <ContactShadows
           position={[0, -0.78, 0]}
@@ -929,6 +1051,7 @@ export function SceneCanvas() {
         Reset view
       </button>
       <AnalyticsStatsPill />
+      <BuildingHoverCard building={hoveredBuilding} />
       <AddBuildingPanel onAddBuilding={handleAddBuilding} />
       {loadError && (
         <div className="building-load-error" role="status">

@@ -22,6 +22,7 @@ export async function ensureBuildingsTable() {
       position_x numeric not null,
       position_y numeric not null,
       position_z numeric not null,
+      click_count integer not null default 0,
       status text not null default 'active' check (status in ('active', 'hidden')),
       created_at timestamptz not null default now(),
       updated_at timestamptz not null default now()
@@ -31,6 +32,11 @@ export async function ensureBuildingsTable() {
   await sql`
     create index if not exists buildings_status_created_at_idx
     on buildings (status, created_at desc)
+  `;
+
+  await sql`
+    alter table buildings
+    add column if not exists click_count integer not null default 0
   `;
 
   await sql`

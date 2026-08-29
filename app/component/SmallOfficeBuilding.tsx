@@ -24,6 +24,8 @@ export type SmallOfficeBuildingProps = {
   name?: string;
   domainUrl?: string;
   clickable?: boolean;
+  onHoverChange?: (hovered: boolean) => void;
+  onVisit?: () => void;
 };
 
 function Window({
@@ -115,6 +117,8 @@ export function SmallOfficeBuilding({
   name,
   domainUrl,
   clickable = true,
+  onHoverChange,
+  onVisit,
 }: SmallOfficeBuildingProps) {
   const [hovered, setHovered] = useState(false);
   const floorHeight = height / 2;
@@ -141,6 +145,7 @@ export function SmallOfficeBuilding({
 
     event.stopPropagation();
     setHovered(true);
+    onHoverChange?.(true);
   };
 
   const handlePointerOut = (event: ThreeEvent<PointerEvent>) => {
@@ -148,12 +153,14 @@ export function SmallOfficeBuilding({
 
     event.stopPropagation();
     setHovered(false);
+    onHoverChange?.(false);
   };
 
   const handleClick = (event: ThreeEvent<MouseEvent>) => {
     if (!buildingUrl) return;
 
     event.stopPropagation();
+    onVisit?.();
     window.open(buildingUrl, "_blank", "noopener,noreferrer");
   };
 
