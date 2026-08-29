@@ -11,6 +11,7 @@ import {
   type BuildingOption,
   type BuildingType,
 } from "@/lib/buildings";
+import { getWebsiteFaviconUrl } from "@/lib/favicon";
 import { OfficeBuilding } from "./OfficeBuilding";
 import { SignalTower } from "./SignalTower";
 import { SmallOfficeBuilding } from "./SmallOfficeBuilding";
@@ -21,7 +22,6 @@ type Step = "choose" | "details";
 type WebsiteFormState = {
   companyName: string;
   domain: string;
-  logoUrl: string;
 };
 
 type WebsiteFormErrors = Partial<Record<keyof WebsiteFormState, string>>;
@@ -43,7 +43,7 @@ function MiniBuildingPreview({ type }: { type: BuildingType }) {
               plotId="B1"
               name="Billboard"
               domain="preview.com"
-              price="$1"
+              price="$2"
               position={[0, -1.4, 0]}
               width={3.2}
               height={1.35}
@@ -56,7 +56,7 @@ function MiniBuildingPreview({ type }: { type: BuildingType }) {
               plotId="A1"
               name="Small"
               domain="preview.com"
-              price="$2"
+              price="$5"
               position={[0, -1.5, 0]}
               width={3.4}
               height={2.7}
@@ -71,7 +71,7 @@ function MiniBuildingPreview({ type }: { type: BuildingType }) {
                 plotId="A2"
                 name="Office"
                 domain="preview.com"
-                price="$3"
+                price="$7"
                 position={[0, 0, 0]}
                 width={6.6}
                 height={10.2}
@@ -87,7 +87,7 @@ function MiniBuildingPreview({ type }: { type: BuildingType }) {
                 plotId="A4"
                 name="Tower"
                 domain="preview.com"
-                price="$4"
+                price="$10"
                 position={[0, 0, 0]}
                 height={13.4}
                 baseWidth={7}
@@ -142,6 +142,8 @@ function BuildingOrderSummary({
   companyName: string;
   domain: string;
 }) {
+  const faviconUrl = domain ? getWebsiteFaviconUrl(domain, 64) : "";
+
   return (
     <section className="building-order-summary" aria-label="Building summary">
       <div>
@@ -157,11 +159,35 @@ function BuildingOrderSummary({
         <strong>{companyName || "Acme"}</strong>
       </div>
       <div>
-        <span>Domain</span>
-        <strong>{domain || "acme.com"}</strong>
+        <span>Website</span>
+        <strong className="building-summary-website">
+          {faviconUrl && (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={faviconUrl} alt="" aria-hidden="true" />
+          )}
+          {domain || "acme.com"}
+        </strong>
       </div>
     </section>
   );
+}
+
+function WebsiteFaviconPreview({ domain }: { domain: string }) {
+  const normalizedDomain = normalizeDomain(domain);
+  const faviconUrl = normalizedDomain ? getWebsiteFaviconUrl(normalizedDomain, 64) : "";
+
+  if (!faviconUrl) return null;
+
+  return (
+    <span className="building-domain-favicon" aria-hidden="true">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src={faviconUrl} alt="" />
+    </span>
+  );
+}
+
+function hasWebsiteFavicon(domain: string) {
+  return Boolean(normalizeDomain(domain));
 }
 
 function WebsiteDetailsForm({
@@ -183,10 +209,6 @@ function WebsiteDetailsForm({
 }) {
   return (
     <div className="building-panel-view">
-      <div className="building-panel-copy">
-        <h2>Add your website</h2>
-      </div>
-
       <div className="building-form-fields">
         <label>
           <span>Company or product name</span>
@@ -201,30 +223,24 @@ function WebsiteDetailsForm({
         </label>
 
         <label>
-          <span>Website domain</span>
-          <input
-            type="text"
-            inputMode="url"
-            autoComplete="url"
-            placeholder="acme.com"
-            value={form.domain}
-            onBlur={(event) => onChange("domain", normalizeDomain(event.target.value))}
-            onChange={(event) => onChange("domain", event.target.value)}
-          />
+          <span>Website</span>
+          <div
+            className={`building-domain-input-wrap${
+              hasWebsiteFavicon(form.domain) ? " has-favicon" : ""
+            }`}
+          >
+            <WebsiteFaviconPreview domain={form.domain} />
+            <input
+              type="text"
+              inputMode="url"
+              autoComplete="url"
+              placeholder="acme.com"
+              value={form.domain}
+              onBlur={(event) => onChange("domain", normalizeDomain(event.target.value))}
+              onChange={(event) => onChange("domain", event.target.value)}
+            />
+          </div>
           {errors.domain && <small>{errors.domain}</small>}
-        </label>
-
-        <label>
-          <span>Logo URL</span>
-          <input
-            type="url"
-            inputMode="url"
-            autoComplete="url"
-            placeholder="https://acme.com/logo.png"
-            value={form.logoUrl}
-            onChange={(event) => onChange("logoUrl", event.target.value)}
-          />
-          {errors.logoUrl && <small>{errors.logoUrl}</small>}
         </label>
       </div>
 
@@ -250,7 +266,7 @@ function WebsiteDetailsForm({
           disabled={saving}
           aria-busy={saving}
         >
-          {saving ? "Adding..." : "Add building"}
+          {saving ? "Opening checkout..." : "Continue to payment"}
         </button>
       </div>
     </div>
@@ -271,7 +287,6 @@ export function AddBuildingPanel({
   const [form, setForm] = useState<WebsiteFormState>({
     companyName: "",
     domain: "",
-    logoUrl: "",
   });
   const [errors, setErrors] = useState<WebsiteFormErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
@@ -321,14 +336,12 @@ export function AddBuildingPanel({
       buildingType: selectedOption?.id,
       companyName: form.companyName,
       domain: form.domain,
-      logoUrl: form.logoUrl,
     });
     const nextErrors: WebsiteFormErrors = parsed.ok
       ? {}
       : {
           companyName: parsed.errors.companyName,
           domain: parsed.errors.domain,
-          logoUrl: parsed.errors.logoUrl,
         };
     const domain = normalizeDomain(form.domain);
     setForm((current) => ({ ...current, domain }));
@@ -346,11 +359,10 @@ export function AddBuildingPanel({
     setSubmitError("");
     try {
       await onAddBuilding(previewData);
-      setSuccessMessage("Building preview is ready.");
-      onOpenChange(false);
+      setSuccessMessage("Opening secure checkout...");
     } catch (error) {
       setSubmitError(
-        error instanceof Error ? error.message : "Could not add this building right now.",
+        error instanceof Error ? error.message : "Could not start checkout right now.",
       );
     } finally {
       setSaving(false);
@@ -411,25 +423,13 @@ export function AddBuildingPanel({
                       selected={selectedBuilding === option.id}
                       onSelect={(nextOption) => {
                         setSelectedBuilding(nextOption.id);
+                        setStep("details");
                         setSuccessMessage("");
+                        setSubmitError("");
                       }}
                     />
                   ))}
                 </div>
-
-                {selectedOption && (
-                  <button
-                    className="building-primary-action"
-                    type="button"
-                  onClick={() => {
-                    setStep("details");
-                    setSuccessMessage("");
-                    setSubmitError("");
-                  }}
-                >
-                  Continue
-                  </button>
-                )}
               </div>
             )}
 

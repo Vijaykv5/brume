@@ -10,7 +10,11 @@
     "required": [
       "DB_URL",
       "UPSTASH_REDIS_REST_URL",
-      "UPSTASH_REDIS_REST_TOKEN"
+      "UPSTASH_REDIS_REST_TOKEN",
+      "DODO_API_KEY",
+      "DODO_ENVIRONMENT",
+      "DODO_PRODUCT_ID",
+      "DODO_WEBHOOK_SECRET"
     ]
   },
   "main": "vinext/server/fetch-handler",

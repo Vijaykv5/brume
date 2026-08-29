@@ -3,8 +3,8 @@ export type BuildingType = "billboard" | "small-office" | "office-building" | "t
 export type BuildingOption = {
   id: BuildingType;
   name: string;
-  price: 1 | 2 | 3 | 4;
-  priceCents: 100 | 200 | 300 | 400;
+  price: 2 | 5 | 7 | 10;
+  priceCents: 200 | 500 | 700 | 1000;
   description: string;
 };
 
@@ -16,12 +16,12 @@ export type BuildingSubmission = {
 };
 
 export type BuildingFormData = BuildingSubmission & {
-  price: 1 | 2 | 3 | 4;
+  price: 2 | 5 | 7 | 10;
 };
 
 export type SavedBuilding = BuildingFormData & {
   id: string;
-  priceCents: 100 | 200 | 300 | 400;
+  priceCents: 200 | 500 | 700 | 1000;
   position: [number, number, number];
   clickCount: number;
   status: "active" | "hidden";
@@ -43,29 +43,29 @@ export const BUILDING_OPTIONS: BuildingOption[] = [
   {
     id: "billboard",
     name: "Billboard",
-    price: 1,
-    priceCents: 100,
+    price: 2,
+    priceCents: 200,
     description: "A small sign spot for simple visibility.",
   },
   {
     id: "small-office",
     name: "Small Office",
-    price: 2,
-    priceCents: 200,
+    price: 5,
+    priceCents: 500,
     description: "A small space for new products.",
   },
   {
     id: "office-building",
     name: "Office Building",
-    price: 3,
-    priceCents: 300,
+    price: 7,
+    priceCents: 700,
     description: "More visibility for growing companies.",
   },
   {
     id: "tower",
     name: "Tower",
-    price: 4,
-    priceCents: 400,
+    price: 10,
+    priceCents: 1000,
     description: "The largest space with maximum visibility.",
   },
 ];

@@ -497,38 +497,6 @@ function EdgeDecorations() {
   );
 }
 
-function getBuildingFocus(building: AddedBuilding): CameraFocusRequest {
-  if (building.buildingType === "billboard") {
-    return {
-      id: building.id,
-      target: [building.position[0], 2.2, building.position[2]],
-      distance: 10,
-    };
-  }
-
-  if (building.buildingType === "tower") {
-    return {
-      id: building.id,
-      target: [building.position[0], 6.8, building.position[2]],
-      distance: 24,
-    };
-  }
-
-  if (building.buildingType === "office-building") {
-    return {
-      id: building.id,
-      target: [building.position[0], 5.4, building.position[2]],
-      distance: 18,
-    };
-  }
-
-  return {
-    id: building.id,
-    target: [building.position[0], 2.2, building.position[2]],
-    distance: 12,
-  };
-}
-
 function AddedWorldBuilding({
   building,
   onHoverBuilding,
@@ -724,6 +692,34 @@ function getAddedBuildingBounds(building: AddedBuilding) {
     new THREE.Vector3(x - width / 2, y - 0.2, z - depth / 2),
     new THREE.Vector3(x + width / 2, y + height, z + depth / 2),
   );
+}
+
+function getAddedBuildingFocusRequest(building: AddedBuilding): CameraFocusRequest {
+  const bounds = getAddedBuildingBounds(building);
+  const center = bounds.getCenter(new THREE.Vector3());
+  const size = bounds.getSize(new THREE.Vector3());
+  const distance = THREE.MathUtils.clamp(
+    Math.max(size.x, size.y, size.z) * 2.4,
+    11,
+    28,
+  );
+
+  return {
+    id: `paid:${building.id}`,
+    target: center.toArray() as [number, number, number],
+    distance,
+  };
+}
+
+function mergeBuildingIntoList(
+  buildings: AddedBuilding[],
+  building: AddedBuilding,
+) {
+  return buildings.some((currentBuilding) => currentBuilding.id === building.id)
+    ? buildings.map((currentBuilding) =>
+        currentBuilding.id === building.id ? building : currentBuilding,
+      )
+    : [...buildings, building];
 }
 
 function getDynamicVisibleScenePoints(
@@ -999,6 +995,8 @@ function CameraRig({
 
 const INTRO_STORAGE_KEY = "buildyourcity:intro-seen";
 const BUILDINGS_SYNC_INTERVAL_MS = 10000;
+const CHECKOUT_FOCUS_POLL_INTERVAL_MS = 2000;
+const CHECKOUT_FOCUS_MAX_POLLS = 30;
 
 function getInitialStaticClickCounts(): Record<StaticBuildingId, number> {
   const emptyCounts = Object.fromEntries(
@@ -1109,8 +1107,8 @@ export function SceneCanvas() {
   }, [completeIntro, introVisible]);
 
   const syncBuildings = useCallback(async ({ quiet = false } = {}) => {
-    if (buildingsSyncInFlightRef.current) return;
-    if (document.visibilityState !== "visible") return;
+    if (buildingsSyncInFlightRef.current) return null;
+    if (document.visibilityState !== "visible") return null;
 
     buildingsSyncInFlightRef.current = true;
 
@@ -1136,12 +1134,14 @@ export function SceneCanvas() {
         setCameraFramingBuildings(buildings);
       }
       setLoadError("");
+      return buildings;
     } catch (error) {
       if (!quiet) {
         setLoadError(
           error instanceof Error ? error.message : "Could not load saved buildings.",
         );
       }
+      return null;
     } finally {
       buildingsSyncInFlightRef.current = false;
     }
@@ -1203,35 +1203,93 @@ export function SceneCanvas() {
     };
   }, [syncBuildings]);
 
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const checkoutStatus = searchParams.get("checkout");
+    const orderId = searchParams.get("order");
+
+    if (checkoutStatus !== "success" || !orderId) return;
+
+    window.history.replaceState(null, "", window.location.pathname);
+
+    let cancelled = false;
+    let pollTimeoutId: number | undefined;
+    let pollCount = 0;
+
+    const focusPaidBuilding = (building: AddedBuilding) => {
+      setIntroVisible(false);
+      setAddedBuildings((currentBuildings) =>
+        mergeBuildingIntoList(currentBuildings, building),
+      );
+      setCameraFramingBuildings((currentBuildings) =>
+        mergeBuildingIntoList(currentBuildings, building),
+      );
+      setFocusRequest(getAddedBuildingFocusRequest(building));
+    };
+
+    const pollOrderBuilding = async () => {
+      if (cancelled) return;
+
+      pollCount += 1;
+
+      try {
+        const response = await fetch(`/api/buildings/orders/${orderId}`, {
+          cache: "no-store",
+        });
+        const payload = (await response.json()) as {
+          status?: string;
+          building?: AddedBuilding | null;
+        };
+
+        if (response.ok && payload.status === "paid" && payload.building) {
+          await syncBuildings({ quiet: true });
+          if (!cancelled) focusPaidBuilding(payload.building);
+          return;
+        }
+      } catch {
+        // The webhook can arrive shortly after the checkout redirect.
+      }
+
+      if (pollCount >= CHECKOUT_FOCUS_MAX_POLLS) return;
+
+      pollTimeoutId = window.setTimeout(
+        pollOrderBuilding,
+        CHECKOUT_FOCUS_POLL_INTERVAL_MS,
+      );
+    };
+
+    pollTimeoutId = window.setTimeout(() => {
+      void pollOrderBuilding();
+    }, 0);
+
+    return () => {
+      cancelled = true;
+      if (pollTimeoutId) window.clearTimeout(pollTimeoutId);
+    };
+  }, [syncBuildings]);
+
   const handleAddBuilding = async (data: BuildingPreviewData) => {
-    const response = await fetch("/api/buildings", {
+    const response = await fetch("/api/buildings/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         buildingType: data.buildingType,
         companyName: data.companyName,
         domain: data.domain,
-        logoUrl: data.logoUrl,
       }),
     });
     const payload = (await response.json()) as {
-      building?: AddedBuilding;
+      checkoutUrl?: string;
       error?: string;
       errors?: Record<string, string>;
     };
 
-    if (!response.ok || !payload.building) {
+    if (!response.ok || !payload.checkoutUrl) {
       const fieldError = payload.errors ? Object.values(payload.errors)[0] : null;
-      throw new Error(fieldError ?? payload.error ?? "Could not add this building.");
+      throw new Error(fieldError ?? payload.error ?? "Could not start checkout.");
     }
 
-    setAddedBuildings((currentBuildings) =>
-      mergeBuildingsWithLocalCounts(currentBuildings, [payload.building as AddedBuilding]),
-    );
-    setCameraFramingBuildings((currentBuildings) =>
-      mergeBuildingsWithLocalCounts(currentBuildings, [payload.building as AddedBuilding]),
-    );
-    setFocusRequest(getBuildingFocus(payload.building));
+    window.location.assign(payload.checkoutUrl);
   };
 
   const handleVisitBuilding = async (buildingId: string) => {
