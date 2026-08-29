@@ -955,6 +955,7 @@ function CameraRig({
 }
 
 const INTRO_STORAGE_KEY = "buildyourcity:intro-seen";
+const BUILDINGS_SYNC_INTERVAL_MS = 3000;
 
 function getInitialStaticClickCounts(): Record<StaticBuildingId, number> {
   const emptyCounts = Object.fromEntries(
@@ -1000,6 +1001,54 @@ function ProductIntroOverlay({
   );
 }
 
+function mergeBuildingsWithLocalCounts(
+  currentBuildings: AddedBuilding[],
+  nextBuildings: AddedBuilding[],
+) {
+  const currentById = new Map(
+    currentBuildings.map((building) => [building.id, building]),
+  );
+  const nextBuildingIds = new Set(nextBuildings.map((building) => building.id));
+
+  const mergedBuildings = nextBuildings.map((building) => {
+    const currentBuilding = currentById.get(building.id);
+    if (!currentBuilding) return building;
+
+    return {
+      ...building,
+      clickCount: Math.max(building.clickCount, currentBuilding.clickCount),
+    };
+  });
+
+  return [
+    ...mergedBuildings,
+    ...currentBuildings.filter((building) => !nextBuildingIds.has(building.id)),
+  ];
+}
+
+function haveSameBuildingPlacements(
+  currentBuildings: AddedBuilding[],
+  nextBuildings: AddedBuilding[],
+) {
+  if (currentBuildings.length !== nextBuildings.length) return false;
+
+  const currentById = new Map(
+    currentBuildings.map((building) => [building.id, building]),
+  );
+
+  return nextBuildings.every((building) => {
+    const currentBuilding = currentById.get(building.id);
+    if (!currentBuilding) return false;
+
+    return (
+      currentBuilding.buildingType === building.buildingType &&
+      currentBuilding.position.every(
+        (value, index) => value === building.position[index],
+      )
+    );
+  });
+}
+
 export function SceneCanvas() {
   const [resetToken, setResetToken] = useState(0);
   const [addedBuildings, setAddedBuildings] = useState<AddedBuilding[]>([]);
@@ -1018,6 +1067,7 @@ export function SceneCanvas() {
     }
   });
   const [addBuildingPanelOpen, setAddBuildingPanelOpen] = useState(false);
+  const buildingsSyncInFlightRef = useRef(false);
   const completeIntro = useCallback(() => {
     try {
       window.localStorage.setItem(INTRO_STORAGE_KEY, "true");
@@ -1037,42 +1087,103 @@ export function SceneCanvas() {
     return () => window.clearTimeout(timeoutId);
   }, [completeIntro, introVisible]);
 
+  const syncBuildings = useCallback(async ({ quiet = false } = {}) => {
+    if (buildingsSyncInFlightRef.current) return;
+    if (document.visibilityState !== "visible") return;
+
+    buildingsSyncInFlightRef.current = true;
+
+    try {
+      const response = await fetch(`/api/buildings?sync=${Date.now()}`, {
+        cache: "no-store",
+      });
+      const payload = (await response.json()) as {
+        buildings?: AddedBuilding[];
+        error?: string;
+      };
+
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Could not load buildings.");
+      }
+
+      const buildings = payload.buildings ?? [];
+      setAddedBuildings((currentBuildings) =>
+        mergeBuildingsWithLocalCounts(currentBuildings, buildings),
+      );
+      setCameraFramingBuildings((currentBuildings) => {
+        const mergedBuildings = mergeBuildingsWithLocalCounts(currentBuildings, buildings);
+
+        return haveSameBuildingPlacements(currentBuildings, mergedBuildings)
+          ? currentBuildings
+          : mergedBuildings;
+      });
+      setLoadError("");
+    } catch (error) {
+      if (!quiet) {
+        setLoadError(
+          error instanceof Error ? error.message : "Could not load saved buildings.",
+        );
+      }
+    } finally {
+      buildingsSyncInFlightRef.current = false;
+    }
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
-    async function loadBuildings() {
-      try {
-        const response = await fetch("/api/buildings");
-        const payload = (await response.json()) as {
-          buildings?: AddedBuilding[];
-          error?: string;
-        };
-
-        if (!response.ok) {
-          throw new Error(payload.error ?? "Could not load buildings.");
-        }
-
-        if (!cancelled) {
-          const buildings = payload.buildings ?? [];
-          setAddedBuildings(buildings);
-          setCameraFramingBuildings(buildings);
-          setLoadError("");
-        }
-      } catch (error) {
-        if (!cancelled) {
-          setLoadError(
-            error instanceof Error ? error.message : "Could not load saved buildings.",
-          );
-        }
+    const initialSyncId = window.setTimeout(() => {
+      if (!cancelled) {
+        void syncBuildings();
       }
-    }
+    }, 0);
+    const intervalId = window.setInterval(() => {
+      if (!cancelled) {
+        void syncBuildings({ quiet: true });
+      }
+    }, BUILDINGS_SYNC_INTERVAL_MS);
 
-    loadBuildings();
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void syncBuildings({ quiet: true });
+      }
+    };
+    const handleOnline = () => {
+      void syncBuildings({ quiet: true });
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("online", handleOnline);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(initialSyncId);
+      window.clearInterval(intervalId);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("online", handleOnline);
     };
-  }, []);
+  }, [syncBuildings]);
+
+  useEffect(() => {
+    if (typeof EventSource === "undefined") return;
+
+    const buildingEvents = new EventSource("/api/buildings/events");
+    const handleBuildingsChanged = () => {
+      void syncBuildings({ quiet: true });
+    };
+    const handleEventsError = () => {
+      buildingEvents.close();
+    };
+
+    buildingEvents.addEventListener("buildings-changed", handleBuildingsChanged);
+    buildingEvents.addEventListener("error", handleEventsError);
+
+    return () => {
+      buildingEvents.removeEventListener("buildings-changed", handleBuildingsChanged);
+      buildingEvents.removeEventListener("error", handleEventsError);
+      buildingEvents.close();
+    };
+  }, [syncBuildings]);
 
   const handleAddBuilding = async (data: BuildingPreviewData) => {
     const response = await fetch("/api/buildings", {
@@ -1096,11 +1207,12 @@ export function SceneCanvas() {
       throw new Error(fieldError ?? payload.error ?? "Could not add this building.");
     }
 
-    setAddedBuildings((currentBuildings) => [...currentBuildings, payload.building as AddedBuilding]);
-    setCameraFramingBuildings((currentBuildings) => [
-      ...currentBuildings,
-      payload.building as AddedBuilding,
-    ]);
+    setAddedBuildings((currentBuildings) =>
+      mergeBuildingsWithLocalCounts(currentBuildings, [payload.building as AddedBuilding]),
+    );
+    setCameraFramingBuildings((currentBuildings) =>
+      mergeBuildingsWithLocalCounts(currentBuildings, [payload.building as AddedBuilding]),
+    );
     setFocusRequest(getBuildingFocus(payload.building));
   };
 

@@ -2,6 +2,7 @@ import { Redis } from "@upstash/redis";
 import type { SavedBuilding } from "@/lib/buildings";
 
 const BUILDINGS_CACHE_KEY = "wake:buildings:active:v1";
+const BUILDINGS_CACHE_VERSION_KEY = "wake:buildings:version:v1";
 const BUILDINGS_CACHE_TTL_SECONDS = 60;
 
 const redis =
@@ -46,5 +47,28 @@ export async function clearCachedBuildings() {
     await redis.del(BUILDINGS_CACHE_KEY);
   } catch (error) {
     console.warn("Failed to clear buildings cache", error);
+  }
+}
+
+export async function getBuildingsCacheVersion() {
+  if (!redis) return null;
+
+  try {
+    const version = await redis.get<number>(BUILDINGS_CACHE_VERSION_KEY);
+    return Number(version ?? 0);
+  } catch (error) {
+    console.warn("Failed to read buildings cache version", error);
+    return null;
+  }
+}
+
+export async function bumpBuildingsCacheVersion() {
+  if (!redis) return null;
+
+  try {
+    return await redis.incr(BUILDINGS_CACHE_VERSION_KEY);
+  } catch (error) {
+    console.warn("Failed to bump buildings cache version", error);
+    return null;
   }
 }

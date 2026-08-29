@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { clearCachedBuildings } from "@/lib/buildings-cache";
+import { bumpBuildingsCacheVersion, clearCachedBuildings } from "@/lib/buildings-cache";
 import { ensureBuildingsTable, sql } from "@/lib/db";
 
 type Params = {
@@ -30,6 +30,7 @@ export async function POST(_request: Request, { params }: Params) {
     }
 
     await clearCachedBuildings();
+    await bumpBuildingsCacheVersion();
 
     return NextResponse.json({ clickCount: Number(row.click_count) });
   } catch (error) {

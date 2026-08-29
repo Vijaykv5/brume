@@ -7,7 +7,11 @@ import {
   type SavedBuilding,
   validateBuildingSubmission,
 } from "@/lib/buildings";
-import { getCachedBuildings, setCachedBuildings } from "@/lib/buildings-cache";
+import {
+  bumpBuildingsCacheVersion,
+  getCachedBuildings,
+  setCachedBuildings,
+} from "@/lib/buildings-cache";
 import { ensureBuildingsTable, sql } from "@/lib/db";
 
 type BuildingRow = {
@@ -185,6 +189,7 @@ export async function POST(request: Request) {
     const building = rowToBuilding((rows as BuildingRow[])[0]);
     const activeBuildings = await loadActiveBuildings();
     await setCachedBuildings(activeBuildings);
+    await bumpBuildingsCacheVersion();
 
     return NextResponse.json(
       { building },
