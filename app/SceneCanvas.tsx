@@ -5,7 +5,7 @@ import { Canvas, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ComponentRef } from "react";
 import * as THREE from "three";
-import type { SavedBuilding } from "@/lib/buildings";
+import type { BuildingType, SavedBuilding } from "@/lib/buildings";
 import {
   SmallOfficeBuilding,
   type SmallOfficeBuildingProps,
@@ -108,6 +108,17 @@ const STATIC_TOWER_HOVER: BuildingHoverCardData = {
   domain: "heyclicky.com",
   clickCount: 0,
 };
+type StaticBuildingId =
+  | typeof STATIC_SMALL_OFFICE_HOVER.id
+  | typeof STATIC_OFFICE_HOVER.id
+  | typeof STATIC_TOWER_HOVER.id;
+
+const STATIC_BUILDING_CLICK_STORAGE_KEY = "buildyourcity:static-building-clicks";
+const STATIC_BUILDING_IDS = [
+  STATIC_SMALL_OFFICE_HOVER.id,
+  STATIC_OFFICE_HOVER.id,
+  STATIC_TOWER_HOVER.id,
+] as const;
 
 type TreePlacement = {
   position: [number, number, number];
@@ -598,13 +609,15 @@ function FloatingIsland({
   addedBuildings = [],
   onHoverBuilding,
   onVisitBuilding,
+  onVisitStaticBuilding,
+  staticClickCounts,
 }: {
   addedBuildings?: AddedBuilding[];
   onHoverBuilding: (building: BuildingHoverCardData | null) => void;
   onVisitBuilding: (buildingId: string) => void;
+  onVisitStaticBuilding: (buildingId: StaticBuildingId) => void;
+  staticClickCounts: Record<StaticBuildingId, number>;
 }) {
-  const staticVisit = () => undefined;
-
   return (
     <group>
       <WorldPlot />
@@ -615,23 +628,44 @@ function FloatingIsland({
       <SmallOfficeBuilding
         {...SMALL_OFFICE_BUILDING}
         onHoverChange={(hovered) =>
-          onHoverBuilding(hovered ? STATIC_SMALL_OFFICE_HOVER : null)
+          onHoverBuilding(
+            hovered
+              ? {
+                  ...STATIC_SMALL_OFFICE_HOVER,
+                  clickCount: staticClickCounts[STATIC_SMALL_OFFICE_HOVER.id],
+                }
+              : null,
+          )
         }
-        onVisit={staticVisit}
+        onVisit={() => onVisitStaticBuilding(STATIC_SMALL_OFFICE_HOVER.id)}
       />
       <OfficeBuilding
         {...OFFICE_BUILDING}
         onHoverChange={(hovered) =>
-          onHoverBuilding(hovered ? STATIC_OFFICE_HOVER : null)
+          onHoverBuilding(
+            hovered
+              ? {
+                  ...STATIC_OFFICE_HOVER,
+                  clickCount: staticClickCounts[STATIC_OFFICE_HOVER.id],
+                }
+              : null,
+          )
         }
-        onVisit={staticVisit}
+        onVisit={() => onVisitStaticBuilding(STATIC_OFFICE_HOVER.id)}
       />
       <SignalTower
         {...SIGNAL_TOWER}
         onHoverChange={(hovered) =>
-          onHoverBuilding(hovered ? STATIC_TOWER_HOVER : null)
+          onHoverBuilding(
+            hovered
+              ? {
+                  ...STATIC_TOWER_HOVER,
+                  clickCount: staticClickCounts[STATIC_TOWER_HOVER.id],
+                }
+              : null,
+          )
         }
-        onVisit={staticVisit}
+        onVisit={() => onVisitStaticBuilding(STATIC_TOWER_HOVER.id)}
       />
       {addedBuildings.map((building) => (
         <AddedWorldBuilding
@@ -673,6 +707,35 @@ function getVisibleScenePoints(right: THREE.Vector3, cameraUp: THREE.Vector3) {
   ];
 }
 
+function getAddedBuildingBounds(building: AddedBuilding) {
+  const [x, y, z] = building.position;
+  const dimensions: Record<
+    BuildingType,
+    { width: number; height: number; depth: number }
+  > = {
+    billboard: { width: 4.2, height: 4.4, depth: 1.1 },
+    "small-office": { width: 4.2, height: 3.6, depth: 3.1 },
+    "office-building": { width: 6.8, height: 11.4, depth: 4.6 },
+    tower: { width: 7.4, height: 18.8, depth: 6 },
+  };
+  const { width, height, depth } = dimensions[building.buildingType];
+
+  return new THREE.Box3(
+    new THREE.Vector3(x - width / 2, y - 0.2, z - depth / 2),
+    new THREE.Vector3(x + width / 2, y + height, z + depth / 2),
+  );
+}
+
+function getDynamicVisibleScenePoints(
+  right: THREE.Vector3,
+  cameraUp: THREE.Vector3,
+  addedBuildings: AddedBuilding[],
+) {
+  return addedBuildings.flatMap((building) =>
+    getBoundsCorners(getAddedBuildingBounds(building)),
+  );
+}
+
 function getProjectedBoundsCenter(
   points: THREE.Vector3[],
   right: THREE.Vector3,
@@ -691,7 +754,7 @@ function getProjectedBoundsCenter(
     .addScaledVector(CAMERA_VIEW_DIRECTION, midpoints[2]);
 }
 
-function getCameraFraming(aspect: number) {
+function getCameraFraming(aspect: number, addedBuildings: AddedBuilding[]) {
   const isMobile = aspect < 0.75;
   const isTablet = aspect >= 0.75 && aspect < 1.35;
   const horizontalLimit = isMobile ? 0.9 : isTablet ? 0.84 : 0.79;
@@ -704,7 +767,10 @@ function getCameraFraming(aspect: number) {
   const forward = CAMERA_VIEW_DIRECTION.clone().negate();
   const right = new THREE.Vector3().crossVectors(forward, THREE.Object3D.DEFAULT_UP).normalize();
   const cameraUp = new THREE.Vector3().crossVectors(right, forward).normalize();
-  const visiblePoints = getVisibleScenePoints(right, cameraUp);
+  const visiblePoints = [
+    ...getVisibleScenePoints(right, cameraUp),
+    ...getDynamicVisibleScenePoints(right, cameraUp, addedBuildings),
+  ];
   const center = getProjectedBoundsCenter(visiblePoints, right, cameraUp);
 
   const fitsAtDistance = (distance: number) => {
@@ -763,10 +829,19 @@ function getCameraFraming(aspect: number) {
   };
 }
 
-function CameraRig({ focusRequest }: { focusRequest: CameraFocusRequest | null }) {
+function CameraRig({
+  focusRequest,
+  addedBuildings,
+}: {
+  focusRequest: CameraFocusRequest | null;
+  addedBuildings: AddedBuilding[];
+}) {
   const { set, size } = useThree();
   const aspect = size.width / Math.max(size.height, 1);
-  const framing = useMemo(() => getCameraFraming(aspect), [aspect]);
+  const framing = useMemo(
+    () => getCameraFraming(aspect, addedBuildings),
+    [addedBuildings, aspect],
+  );
   const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null);
   const defaultTarget = useMemo(
     () => new THREE.Vector3(...framing.target),
@@ -879,12 +954,88 @@ function CameraRig({ focusRequest }: { focusRequest: CameraFocusRequest | null }
   );
 }
 
+const INTRO_STORAGE_KEY = "buildyourcity:intro-seen";
+
+function getInitialStaticClickCounts(): Record<StaticBuildingId, number> {
+  const emptyCounts = Object.fromEntries(
+    STATIC_BUILDING_IDS.map((buildingId) => [buildingId, 0]),
+  ) as Record<StaticBuildingId, number>;
+
+  if (typeof window === "undefined") return emptyCounts;
+
+  try {
+    const rawCounts = JSON.parse(
+      window.localStorage.getItem(STATIC_BUILDING_CLICK_STORAGE_KEY) ?? "{}",
+    ) as Partial<Record<StaticBuildingId, unknown>>;
+
+    return Object.fromEntries(
+      STATIC_BUILDING_IDS.map((buildingId) => [
+        buildingId,
+        typeof rawCounts[buildingId] === "number"
+          ? Math.max(0, rawCounts[buildingId])
+          : 0,
+      ]),
+    ) as Record<StaticBuildingId, number>;
+  } catch {
+    return emptyCounts;
+  }
+}
+
+function ProductIntroOverlay({
+  visible,
+}: {
+  visible: boolean;
+}) {
+  if (!visible) return null;
+
+  return (
+    <section className="product-intro" aria-label="Discover products">
+      <div className="product-intro-content">
+        <h1>
+          Discover products
+          <span>built to stand out</span>
+        </h1>
+      </div>
+    </section>
+  );
+}
+
 export function SceneCanvas() {
   const [resetToken, setResetToken] = useState(0);
   const [addedBuildings, setAddedBuildings] = useState<AddedBuilding[]>([]);
+  const [cameraFramingBuildings, setCameraFramingBuildings] = useState<AddedBuilding[]>([]);
   const [hoveredBuilding, setHoveredBuilding] = useState<BuildingHoverCardData | null>(null);
+  const [staticClickCounts, setStaticClickCounts] = useState(getInitialStaticClickCounts);
   const [focusRequest, setFocusRequest] = useState<CameraFocusRequest | null>(null);
   const [loadError, setLoadError] = useState("");
+  const [introVisible, setIntroVisible] = useState(() => {
+    if (typeof window === "undefined") return false;
+
+    try {
+      return window.localStorage.getItem(INTRO_STORAGE_KEY) !== "true";
+    } catch {
+      return true;
+    }
+  });
+  const [addBuildingPanelOpen, setAddBuildingPanelOpen] = useState(false);
+  const completeIntro = useCallback(() => {
+    try {
+      window.localStorage.setItem(INTRO_STORAGE_KEY, "true");
+    } catch {
+      // Local storage can be unavailable in private or locked-down browsers.
+    }
+
+    setIntroVisible(false);
+    setFocusRequest(null);
+    setResetToken((token) => token + 1);
+  }, []);
+
+  useEffect(() => {
+    if (!introVisible) return;
+
+    const timeoutId = window.setTimeout(completeIntro, 3000);
+    return () => window.clearTimeout(timeoutId);
+  }, [completeIntro, introVisible]);
 
   useEffect(() => {
     let cancelled = false;
@@ -902,7 +1053,9 @@ export function SceneCanvas() {
         }
 
         if (!cancelled) {
-          setAddedBuildings(payload.buildings ?? []);
+          const buildings = payload.buildings ?? [];
+          setAddedBuildings(buildings);
+          setCameraFramingBuildings(buildings);
           setLoadError("");
         }
       } catch (error) {
@@ -944,6 +1097,10 @@ export function SceneCanvas() {
     }
 
     setAddedBuildings((currentBuildings) => [...currentBuildings, payload.building as AddedBuilding]);
+    setCameraFramingBuildings((currentBuildings) => [
+      ...currentBuildings,
+      payload.building as AddedBuilding,
+    ]);
     setFocusRequest(getBuildingFocus(payload.building));
   };
 
@@ -981,6 +1138,7 @@ export function SceneCanvas() {
     try {
       const response = await fetch(`/api/buildings/${buildingId}/click`, {
         method: "POST",
+        keepalive: true,
       });
       const payload = (await response.json()) as {
         clickCount?: number;
@@ -992,8 +1150,33 @@ export function SceneCanvas() {
 
       syncClickCount(payload.clickCount);
     } catch {
-      updateLocalClickCount(-1);
+      console.warn("Could not persist building click count.");
     }
+  };
+
+  const handleVisitStaticBuilding = (buildingId: StaticBuildingId) => {
+    setStaticClickCounts((currentCounts) => {
+      const nextCounts = {
+        ...currentCounts,
+        [buildingId]: currentCounts[buildingId] + 1,
+      };
+
+      try {
+        window.localStorage.setItem(
+          STATIC_BUILDING_CLICK_STORAGE_KEY,
+          JSON.stringify(nextCounts),
+        );
+      } catch {
+        // Static demo counts are only a local convenience.
+      }
+
+      return nextCounts;
+    });
+    setHoveredBuilding((currentBuilding) =>
+      currentBuilding?.id === buildingId
+        ? { ...currentBuilding, clickCount: currentBuilding.clickCount + 1 }
+        : currentBuilding,
+    );
   };
 
   return (
@@ -1028,6 +1211,8 @@ export function SceneCanvas() {
           addedBuildings={addedBuildings}
           onHoverBuilding={setHoveredBuilding}
           onVisitBuilding={handleVisitBuilding}
+          onVisitStaticBuilding={handleVisitStaticBuilding}
+          staticClickCounts={staticClickCounts}
         />
         <SkyBirds />
         <ContactShadows
@@ -1038,7 +1223,11 @@ export function SceneCanvas() {
           far={5}
           color="#7aa7bd"
         />
-        <CameraRig key={resetToken} focusRequest={focusRequest} />
+        <CameraRig
+          key={resetToken}
+          focusRequest={focusRequest}
+          addedBuildings={cameraFramingBuildings}
+        />
       </Canvas>
       <button
         className="reset-camera-button"
@@ -1051,8 +1240,13 @@ export function SceneCanvas() {
         Reset view
       </button>
       <AnalyticsStatsPill />
+      <ProductIntroOverlay visible={introVisible} />
       <BuildingHoverCard building={hoveredBuilding} />
-      <AddBuildingPanel onAddBuilding={handleAddBuilding} />
+      <AddBuildingPanel
+        onAddBuilding={handleAddBuilding}
+        open={addBuildingPanelOpen}
+        onOpenChange={setAddBuildingPanelOpen}
+      />
       {loadError && (
         <div className="building-load-error" role="status">
           {loadError}

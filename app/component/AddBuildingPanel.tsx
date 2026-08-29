@@ -259,10 +259,13 @@ function WebsiteDetailsForm({
 
 export function AddBuildingPanel({
   onAddBuilding,
+  open,
+  onOpenChange,
 }: {
   onAddBuilding: (data: BuildingPreviewData) => Promise<void>;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }) {
-  const [open, setOpen] = useState(false);
   const [step, setStep] = useState<Step>("choose");
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingType | null>(null);
   const [form, setForm] = useState<WebsiteFormState>({
@@ -280,12 +283,12 @@ export function AddBuildingPanel({
     if (!open) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") onOpenChange(false);
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
+  }, [onOpenChange, open]);
 
   useEffect(() => {
     if (!successMessage) return;
@@ -295,12 +298,12 @@ export function AddBuildingPanel({
   }, [successMessage]);
 
   const handleOpen = () => {
-    setOpen(true);
+    onOpenChange(true);
     setSuccessMessage("");
   };
 
   const handleClose = () => {
-    setOpen(false);
+    onOpenChange(false);
     setErrors({});
     setSuccessMessage("");
     setSubmitError("");
@@ -344,7 +347,7 @@ export function AddBuildingPanel({
     try {
       await onAddBuilding(previewData);
       setSuccessMessage("Building preview is ready.");
-      setOpen(false);
+      onOpenChange(false);
     } catch (error) {
       setSubmitError(
         error instanceof Error ? error.message : "Could not add this building right now.",
