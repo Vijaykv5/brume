@@ -238,7 +238,7 @@ function normalizeHostname(hostname: string) {
   return hostname.trim().replace(/:\d+$/g, "").toLowerCase();
 }
 
-export async function getGoogleAnalyticsSummary(hostname = ""): Promise<GoogleAnalyticsSummary> {
+export async function getGoogleAnalyticsSummary(): Promise<GoogleAnalyticsSummary> {
   const config = getAnalyticsConfig();
   if (!config.configured) {
     return {
@@ -252,11 +252,9 @@ export async function getGoogleAnalyticsSummary(hostname = ""): Promise<GoogleAn
   const token = await getAccessToken(config.clientEmail, config.privateKey);
   const property = `properties/${config.propertyId}`;
   const today = new Date().toISOString().slice(0, 10);
-  const reportHostname = normalizeHostname(
-    process.env.GA_HOSTNAME ?? hostname,
-  );
+  const reportHostname = normalizeHostname(process.env.GA_HOSTNAME ?? "");
   const viewsReportBody: Record<string, unknown> = {
-    dateRanges: [{ startDate: "2020-01-01", endDate: today }],
+    dateRanges: [{ startDate: "2026-08-01", endDate: today }],
     dimensions: [{ name: "hostName" }],
     metrics: [{ name: "screenPageViews" }],
     metricAggregations: ["TOTAL"],
@@ -278,8 +276,8 @@ export async function getGoogleAnalyticsSummary(hostname = ""): Promise<GoogleAn
     postAnalyticsReport(`${property}:runRealtimeReport`, token, {
       minuteRanges: [
         {
-          name: "last_5_minutes",
-          startMinutesAgo: 4,
+          name: "last_30_minutes",
+          startMinutesAgo: 29,
           endMinutesAgo: 0,
         },
       ],

@@ -4,9 +4,9 @@ import {
   GoogleAnalyticsDataError,
 } from "@/lib/google-analytics-data";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    const summary = await getGoogleAnalyticsSummary(new URL(request.url).hostname);
+    const summary = await getGoogleAnalyticsSummary();
     return NextResponse.json(summary);
   } catch (error) {
     console.error("Failed to load Google Analytics summary", error);
