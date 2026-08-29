@@ -3,8 +3,20 @@
   "name": "my-bun-app",
   "compatibility_date": "2026-08-28",
   "compatibility_flags": [
-    "nodejs_compat"
+    "nodejs_compat",
+    "nodejs_compat_populate_process_env"
   ],
+  "secrets": {
+    "required": [
+      "DB_URL",
+      "UPSTASH_REDIS_REST_URL",
+      "UPSTASH_REDIS_REST_TOKEN",
+      "GA_PROPERTY_ID",
+      "GOOGLE_CLIENT_EMAIL",
+      "GOOGLE_PRIVATE_KEY",
+      "NEXT_PUBLIC_GA_MEASUREMENT_ID"
+    ]
+  },
   "main": "vinext/server/fetch-handler",
   "assets": {
     "directory": "dist/client",

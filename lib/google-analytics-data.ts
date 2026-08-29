@@ -23,11 +23,24 @@ export type GoogleAnalyticsSummary = {
   configured: boolean;
   onlineNow: number;
   views: number;
+  missing?: string[];
 };
 
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
 
-function getAnalyticsConfig() {
+type AnalyticsConfig =
+  | {
+      configured: true;
+      propertyId: string;
+      clientEmail: string;
+      privateKey: string;
+    }
+  | {
+      configured: false;
+      missing: string[];
+    };
+
+function getAnalyticsConfig(): AnalyticsConfig {
   const propertyId = process.env.GA_PROPERTY_ID;
   const clientEmail =
     process.env.GOOGLE_CLIENT_EMAIL ?? process.env.GA_CLIENT_EMAIL;
@@ -35,8 +48,19 @@ function getAnalyticsConfig() {
     process.env.GOOGLE_PRIVATE_KEY ?? process.env.GA_PRIVATE_KEY ?? ""
   ).replace(/\\n/g, "\n");
 
-  if (!propertyId || !clientEmail || !privateKey) return null;
-  return { propertyId, clientEmail, privateKey };
+  const missing = [
+    !propertyId ? "GA_PROPERTY_ID" : null,
+    !clientEmail ? "GOOGLE_CLIENT_EMAIL" : null,
+    !privateKey ? "GOOGLE_PRIVATE_KEY" : null,
+  ].filter((key): key is string => key !== null);
+
+  if (missing.length > 0) return { configured: false, missing };
+  return {
+    configured: true,
+    propertyId: propertyId as string,
+    clientEmail: clientEmail as string,
+    privateKey,
+  };
 }
 
 function base64UrlEncode(input: string | ArrayBuffer) {
@@ -159,8 +183,13 @@ async function postAnalyticsReport(
 
 export async function getGoogleAnalyticsSummary(): Promise<GoogleAnalyticsSummary> {
   const config = getAnalyticsConfig();
-  if (!config) {
-    return { configured: false, onlineNow: 0, views: 0 };
+  if (!config.configured) {
+    return {
+      configured: false,
+      onlineNow: 0,
+      views: 0,
+      missing: config.missing,
+    };
   }
 
   const token = await getAccessToken(config.clientEmail, config.privateKey);
