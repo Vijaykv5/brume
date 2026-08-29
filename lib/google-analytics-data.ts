@@ -17,6 +17,11 @@ type AnalyticsReportResponse = {
   totals?: Array<{
     metricValues?: Array<{ value?: string }>;
   }>;
+  error?: {
+    code?: number;
+    message?: string;
+    status?: string;
+  };
 };
 
 export type GoogleAnalyticsSummary = {
@@ -25,6 +30,18 @@ export type GoogleAnalyticsSummary = {
   views: number;
   missing?: string[];
 };
+
+export class GoogleAnalyticsDataError extends Error {
+  code: string;
+  status: number;
+
+  constructor(code: string, message: string, status = 502) {
+    super(message);
+    this.name = "GoogleAnalyticsDataError";
+    this.code = code;
+    this.status = status;
+  }
+}
 
 let cachedAccessToken: { token: string; expiresAt: number } | null = null;
 
@@ -85,6 +102,15 @@ function privateKeyToArrayBuffer(privateKey: string) {
     .replace(/-----BEGIN PRIVATE KEY-----/g, "")
     .replace(/-----END PRIVATE KEY-----/g, "")
     .replace(/\s/g, "");
+
+  if (!base64Key) {
+    throw new GoogleAnalyticsDataError(
+      "ga_private_key_invalid",
+      "GOOGLE_PRIVATE_KEY is empty or not a valid private key.",
+      500,
+    );
+  }
+
   const binary = atob(base64Key);
   const bytes = new Uint8Array(binary.length);
 
@@ -108,13 +134,24 @@ async function createSignedJwt(clientEmail: string, privateKey: string) {
   const unsignedToken = `${base64UrlEncode(JSON.stringify(header))}.${base64UrlEncode(
     JSON.stringify(payload),
   )}`;
-  const cryptoKey = await crypto.subtle.importKey(
-    "pkcs8",
-    privateKeyToArrayBuffer(privateKey),
-    { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
-    false,
-    ["sign"],
-  );
+
+  let cryptoKey: CryptoKey;
+  try {
+    cryptoKey = await crypto.subtle.importKey(
+      "pkcs8",
+      privateKeyToArrayBuffer(privateKey),
+      { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" },
+      false,
+      ["sign"],
+    );
+  } catch {
+    throw new GoogleAnalyticsDataError(
+      "ga_private_key_invalid",
+      "GOOGLE_PRIVATE_KEY could not be parsed. Re-copy the private_key from the service account JSON.",
+      500,
+    );
+  }
+
   const signature = await crypto.subtle.sign(
     "RSASSA-PKCS1-v1_5",
     cryptoKey,
@@ -141,7 +178,11 @@ async function getAccessToken(clientEmail: string, privateKey: string) {
   const payload = (await response.json()) as GoogleTokenResponse;
 
   if (!response.ok || !payload.access_token) {
-    throw new Error(payload.error_description ?? payload.error ?? "Could not authorize GA4.");
+    throw new GoogleAnalyticsDataError(
+      "ga_auth_failed",
+      payload.error_description ?? payload.error ?? "Google rejected the service account credentials.",
+      502,
+    );
   }
 
   cachedAccessToken = {
@@ -173,12 +214,23 @@ async function postAnalyticsReport(
     },
     body: JSON.stringify(body),
   });
+  const payload = (await response.json()) as AnalyticsReportResponse;
 
   if (!response.ok) {
-    throw new Error(`GA4 report failed with status ${response.status}.`);
+    const message = payload.error?.message ?? `GA4 report failed with status ${response.status}.`;
+    const code =
+      response.status === 403
+        ? "ga_property_forbidden"
+        : response.status === 404
+          ? "ga_property_not_found"
+          : response.status === 400
+            ? "ga_report_invalid"
+            : "ga_report_failed";
+
+    throw new GoogleAnalyticsDataError(code, message, response.status);
   }
 
-  return (await response.json()) as AnalyticsReportResponse;
+  return payload;
 }
 
 export async function getGoogleAnalyticsSummary(): Promise<GoogleAnalyticsSummary> {
