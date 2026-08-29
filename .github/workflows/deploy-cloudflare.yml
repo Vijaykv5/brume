@@ -40,10 +40,6 @@ jobs:
           DATABASE_URL: ${{ secrets.DB_URL }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          NEXT_PUBLIC_GA_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_GA_MEASUREMENT_ID }}
-          GA_PROPERTY_ID: ${{ secrets.GA_PROPERTY_ID }}
-          GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
-          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
 
       - name: Type check
         run: bunx tsc --noEmit --pretty false
@@ -55,10 +51,6 @@ jobs:
           DATABASE_URL: ${{ secrets.DB_URL }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          NEXT_PUBLIC_GA_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_GA_MEASUREMENT_ID }}
-          GA_PROPERTY_ID: ${{ secrets.GA_PROPERTY_ID }}
-          GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
-          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
 
       - name: Verify Cloudflare credentials
         run: bunx wrangler whoami
@@ -71,20 +63,12 @@ jobs:
           printf '%s' "$DB_URL" | bunx wrangler versions secret put DB_URL --config dist/server/wrangler.json
           printf '%s' "$UPSTASH_REDIS_REST_URL" | bunx wrangler versions secret put UPSTASH_REDIS_REST_URL --config dist/server/wrangler.json
           printf '%s' "$UPSTASH_REDIS_REST_TOKEN" | bunx wrangler versions secret put UPSTASH_REDIS_REST_TOKEN --config dist/server/wrangler.json
-          printf '%s' "$GA_PROPERTY_ID" | bunx wrangler versions secret put GA_PROPERTY_ID --config dist/server/wrangler.json
-          printf '%s' "$GOOGLE_CLIENT_EMAIL" | bunx wrangler versions secret put GOOGLE_CLIENT_EMAIL --config dist/server/wrangler.json
-          printf '%s' "$GOOGLE_PRIVATE_KEY" | bunx wrangler versions secret put GOOGLE_PRIVATE_KEY --config dist/server/wrangler.json
-          printf '%s' "$NEXT_PUBLIC_GA_MEASUREMENT_ID" | bunx wrangler versions secret put NEXT_PUBLIC_GA_MEASUREMENT_ID --config dist/server/wrangler.json
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           DB_URL: ${{ secrets.DB_URL }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          NEXT_PUBLIC_GA_MEASUREMENT_ID: ${{ secrets.NEXT_PUBLIC_GA_MEASUREMENT_ID }}
-          GA_PROPERTY_ID: ${{ secrets.GA_PROPERTY_ID }}
-          GOOGLE_CLIENT_EMAIL: ${{ secrets.GOOGLE_CLIENT_EMAIL }}
-          GOOGLE_PRIVATE_KEY: ${{ secrets.GOOGLE_PRIVATE_KEY }}
 
       - name: Deploy to Cloudflare
         run: bun run deploy:vinext

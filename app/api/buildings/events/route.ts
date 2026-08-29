@@ -5,8 +5,8 @@ import {
 
 export const dynamic = "force-dynamic";
 
-const BUILDINGS_EVENTS_CHECK_INTERVAL_MS = 2000;
-const BUILDINGS_EVENTS_HEARTBEAT_INTERVAL_MS = 15000;
+const BUILDINGS_EVENTS_CHECK_INTERVAL_MS = 7000;
+const BUILDINGS_EVENTS_HEARTBEAT_INTERVAL_MS = 30000;
 
 function encodeServerEvent(event: string, data: unknown) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;

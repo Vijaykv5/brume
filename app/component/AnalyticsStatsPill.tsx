@@ -9,6 +9,42 @@ type AnalyticsSummary = {
 };
 
 const REFRESH_INTERVAL_MS = 30000;
+const VISITOR_ID_STORAGE_KEY = "buildyourcity:visitor-id";
+const VIEW_TRACKED_STORAGE_KEY = "buildyourcity:view-tracked";
+
+function createVisitorId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `visitor-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+}
+
+function getOrCreateVisitorId() {
+  try {
+    const visitorId = window.localStorage.getItem(VISITOR_ID_STORAGE_KEY);
+    if (visitorId) return visitorId;
+
+    const nextVisitorId = createVisitorId();
+    window.localStorage.setItem(VISITOR_ID_STORAGE_KEY, nextVisitorId);
+    return nextVisitorId;
+  } catch {
+    return createVisitorId();
+  }
+}
+
+function shouldCountSessionView() {
+  try {
+    if (window.sessionStorage.getItem(VIEW_TRACKED_STORAGE_KEY) === "true") {
+      return false;
+    }
+
+    window.sessionStorage.setItem(VIEW_TRACKED_STORAGE_KEY, "true");
+    return true;
+  } catch {
+    return true;
+  }
+}
 
 export function AnalyticsStatsPill() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
@@ -16,10 +52,15 @@ export function AnalyticsStatsPill() {
 
   useEffect(() => {
     let cancelled = false;
+    const visitorId = getOrCreateVisitorId();
 
-    async function loadSummary() {
+    async function trackSummary({ countView = false } = {}) {
       try {
-        const response = await fetch("/api/analytics-summary");
+        const response = await fetch("/api/analytics-summary", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ visitorId, countView }),
+        });
         if (!response.ok) throw new Error("Could not load analytics.");
         const nextSummary = (await response.json()) as AnalyticsSummary;
         if (!cancelled) setSummary(nextSummary);
@@ -28,11 +69,13 @@ export function AnalyticsStatsPill() {
       }
     }
 
-    loadSummary();
-    const intervalId = window.setInterval(loadSummary, REFRESH_INTERVAL_MS);
+    trackSummary({ countView: shouldCountSessionView() });
+    const intervalId = window.setInterval(() => {
+      trackSummary();
+    }, REFRESH_INTERVAL_MS);
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") loadSummary();
+      if (document.visibilityState === "visible") trackSummary();
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);

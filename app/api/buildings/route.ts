@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   getAddedBuildingPosition,
   getBuildingOption,
+  getNonOverlappingBuildingPlacements,
   isBuildingType,
   type BuildingType,
   type SavedBuilding,
@@ -76,7 +77,30 @@ async function loadActiveBuildings() {
     order by created_at asc
   `;
 
-  return (rows as BuildingRow[]).map(rowToBuilding);
+  const buildings = (rows as BuildingRow[]).map(rowToBuilding);
+  const repairedBuildings = getNonOverlappingBuildingPlacements(buildings);
+  const movedBuildings = repairedBuildings.filter((building, index) => {
+    const originalPosition = buildings[index].position;
+
+    return building.position.some((value, positionIndex) => value !== originalPosition[positionIndex]);
+  });
+
+  if (movedBuildings.length > 0) {
+    await Promise.all(
+      movedBuildings.map((building) =>
+        sql`
+          update buildings
+          set position_x = ${building.position[0]},
+              position_y = ${building.position[1]},
+              position_z = ${building.position[2]},
+              updated_at = now()
+          where id = ${building.id}
+        `,
+      ),
+    );
+  }
+
+  return repairedBuildings;
 }
 
 function normalizeSavedBuilding(building: SavedBuilding): SavedBuilding {

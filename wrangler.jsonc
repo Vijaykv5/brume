@@ -10,11 +10,7 @@
     "required": [
       "DB_URL",
       "UPSTASH_REDIS_REST_URL",
-      "UPSTASH_REDIS_REST_TOKEN",
-      "GA_PROPERTY_ID",
-      "GOOGLE_CLIENT_EMAIL",
-      "GOOGLE_PRIVATE_KEY",
-      "NEXT_PUBLIC_GA_MEASUREMENT_ID"
+      "UPSTASH_REDIS_REST_TOKEN"
     ]
   },
   "main": "vinext/server/fetch-handler",

@@ -37,9 +37,9 @@ const CAMERA_VIEW_DIRECTION = new THREE.Vector3(
   Math.sin(CAMERA_ELEVATION),
   Math.cos(CAMERA_AZIMUTH) * Math.cos(CAMERA_ELEVATION),
 ).normalize();
-const ISLAND_BOUNDS = new THREE.Box3(
-  new THREE.Vector3(-11.1, -0.55, -7.35),
-  new THREE.Vector3(11.1, 0.55, 7.35),
+const CITY_FRAMING_BOUNDS = new THREE.Box3(
+  new THREE.Vector3(-24, -0.55, -18),
+  new THREE.Vector3(26, 0.55, 18),
 );
 const BUILDING_BOUNDS = new THREE.Box3(
   new THREE.Vector3(-9.3, 0.45, -2.65),
@@ -699,7 +699,7 @@ function getVisibleScenePoints(right: THREE.Vector3, cameraUp: THREE.Vector3) {
   );
 
   return [
-    ...getBoundsCorners(ISLAND_BOUNDS),
+    ...getBoundsCorners(CITY_FRAMING_BOUNDS),
     ...getBoundsCorners(BUILDING_BOUNDS),
     ...getBoundsCorners(OFFICE_BUILDING_BOUNDS),
     ...getBoundsCorners(SIGNAL_TOWER_BOUNDS),
@@ -754,6 +754,18 @@ function getProjectedBoundsCenter(
     .addScaledVector(CAMERA_VIEW_DIRECTION, midpoints[2]);
 }
 
+function getWorldXZBounds(points: THREE.Vector3[]) {
+  const xValues = points.map((point) => point.x);
+  const zValues = points.map((point) => point.z);
+
+  return {
+    minX: Math.min(...xValues),
+    maxX: Math.max(...xValues),
+    minZ: Math.min(...zValues),
+    maxZ: Math.max(...zValues),
+  };
+}
+
 function getCameraFraming(aspect: number, addedBuildings: AddedBuilding[]) {
   const isMobile = aspect < 0.75;
   const isTablet = aspect >= 0.75 && aspect < 1.35;
@@ -772,6 +784,7 @@ function getCameraFraming(aspect: number, addedBuildings: AddedBuilding[]) {
     ...getDynamicVisibleScenePoints(right, cameraUp, addedBuildings),
   ];
   const center = getProjectedBoundsCenter(visiblePoints, right, cameraUp);
+  const worldBounds = getWorldXZBounds(visiblePoints);
 
   const fitsAtDistance = (distance: number) => {
     const targetOffset = fitVerticalBias * distance * tangent;
@@ -826,6 +839,15 @@ function getCameraFraming(aspect: number, addedBuildings: AddedBuilding[]) {
     target: target.toArray() as [number, number, number],
     minTargetY: target.y - 0.7,
     maxTargetY: target.y + 0.7,
+    minTargetX: worldBounds.minX - (isMobile ? 2 : 4),
+    maxTargetX: worldBounds.maxX + (isMobile ? 2 : 4),
+    minTargetZ: worldBounds.minZ - (isMobile ? 2 : 4),
+    maxTargetZ: worldBounds.maxZ + (isMobile ? 2 : 4),
+    minDistance: Math.max(7, distance * (isMobile ? 0.44 : 0.38)),
+    maxDistance: Math.min(
+      distance * (isMobile ? 0.82 : isTablet ? 0.96 : 1.18),
+      isMobile ? 46 : isTablet ? 62 : 82,
+    ),
   };
 }
 
@@ -865,11 +887,10 @@ function CameraRig({
     const controls = controlsRef.current;
     if (!controls || correctingMovement.current) return;
 
-    const horizontalRange = 24;
     const constrainedX = THREE.MathUtils.clamp(
       controls.target.x,
-      defaultTarget.x - horizontalRange,
-      defaultTarget.x + horizontalRange,
+      framing.minTargetX,
+      framing.maxTargetX,
     );
     const constrainedY = THREE.MathUtils.clamp(
       controls.target.y,
@@ -878,23 +899,45 @@ function CameraRig({
     );
     const constrainedZ = THREE.MathUtils.clamp(
       controls.target.z,
-      defaultTarget.z - horizontalRange,
-      defaultTarget.z + horizontalRange,
+      framing.minTargetZ,
+      framing.maxTargetZ,
     );
     const correction = new THREE.Vector3(
       controls.target.x - constrainedX,
       controls.target.y - constrainedY,
       controls.target.z - constrainedZ,
     );
+    const target = new THREE.Vector3(constrainedX, constrainedY, constrainedZ);
+    const targetToCamera = controls.object.position.clone().sub(target);
+    const cameraDistance = targetToCamera.length();
+    const constrainedDistance = THREE.MathUtils.clamp(
+      cameraDistance,
+      framing.minDistance,
+      framing.maxDistance,
+    );
+    const needsDistanceCorrection = Math.abs(cameraDistance - constrainedDistance) > 0.001;
 
-    if (correction.lengthSq() < 0.000001) return;
+    if (correction.lengthSq() < 0.000001 && !needsDistanceCorrection) return;
 
     correctingMovement.current = true;
     controls.object.position.sub(correction);
-    controls.target.set(constrainedX, constrainedY, constrainedZ);
+    if (needsDistanceCorrection) {
+      targetToCamera.setLength(constrainedDistance);
+      controls.object.position.copy(target.clone().add(targetToCamera));
+    }
+    controls.target.copy(target);
     controls.object.lookAt(controls.target);
     correctingMovement.current = false;
-  }, [defaultTarget, framing.maxTargetY, framing.minTargetY]);
+  }, [
+    framing.maxDistance,
+    framing.maxTargetX,
+    framing.maxTargetY,
+    framing.maxTargetZ,
+    framing.minDistance,
+    framing.minTargetX,
+    framing.minTargetY,
+    framing.minTargetZ,
+  ]);
 
   useLayoutEffect(() => {
     set({ camera: fittedCamera });
@@ -937,10 +980,10 @@ function CameraRig({
       enableRotate
       enableZoom
       zoomToCursor
-      minDistance={Math.max(8, framing.distance * 0.42)}
-      maxDistance={framing.distance * 1.8}
-      minPolarAngle={0.35}
-      maxPolarAngle={Math.PI / 2.25}
+      minDistance={framing.minDistance}
+      maxDistance={framing.maxDistance}
+      minPolarAngle={0.48}
+      maxPolarAngle={Math.PI / 2.35}
       screenSpacePanning
       mouseButtons={{
         LEFT: THREE.MOUSE.ROTATE,
@@ -955,7 +998,7 @@ function CameraRig({
 }
 
 const INTRO_STORAGE_KEY = "buildyourcity:intro-seen";
-const BUILDINGS_SYNC_INTERVAL_MS = 3000;
+const BUILDINGS_SYNC_INTERVAL_MS = 10000;
 
 function getInitialStaticClickCounts(): Record<StaticBuildingId, number> {
   const emptyCounts = Object.fromEntries(
@@ -1304,7 +1347,7 @@ export function SceneCanvas() {
           gl.setClearAlpha(0);
         }}
       >
-        <fog attach="fog" args={["#bfe8ff", 55, 120]} />
+        <fog attach="fog" args={["#bfe8ff", 85, 175]} />
         <ambientLight intensity={0.82} />
         <directionalLight
           castShadow
