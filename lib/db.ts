@@ -61,3 +61,29 @@ export async function ensureBuildingsTable() {
     check (price_cents in (100, 200, 300, 400))
   `;
 }
+
+export async function ensureSiteAnalyticsTables() {
+  await sql`
+    create table if not exists site_analytics_daily (
+      analytics_date date primary key,
+      views integer not null default 0,
+      unique_visitors integer not null default 0,
+      created_at timestamptz not null default now(),
+      updated_at timestamptz not null default now()
+    )
+  `;
+
+  await sql`
+    create table if not exists site_analytics_daily_visitors (
+      analytics_date date not null,
+      visitor_hash text not null,
+      created_at timestamptz not null default now(),
+      primary key (analytics_date, visitor_hash)
+    )
+  `;
+
+  await sql`
+    create index if not exists site_analytics_daily_visitors_date_idx
+    on site_analytics_daily_visitors (analytics_date)
+  `;
+}

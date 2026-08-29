@@ -1,8 +1,10 @@
 import { Redis } from "@upstash/redis";
+import { ensureSiteAnalyticsTables, sql } from "@/lib/db";
 
 const SITE_VIEWS_KEY = "wake:analytics:views:v1";
 const SITE_ONLINE_KEY = "wake:analytics:online:v1";
 const ONLINE_WINDOW_SECONDS = 90;
+const VISITOR_HASH_PEPPER = "buildyourcity-site-analytics-v1";
 
 const redis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
@@ -37,6 +39,75 @@ async function cleanupOfflineVisitors(nowSeconds: number) {
   );
 }
 
+async function hashVisitorId(visitorId: string) {
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(`${VISITOR_HASH_PEPPER}:${visitorId}`),
+  );
+  const bytes = new Uint8Array(digest);
+
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function getTodayDateKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+async function persistDailyView(visitorId: string) {
+  await ensureSiteAnalyticsTables();
+
+  const analyticsDate = getTodayDateKey();
+  const visitorHash = await hashVisitorId(visitorId);
+  const insertedVisitors = await sql`
+    insert into site_analytics_daily_visitors (analytics_date, visitor_hash)
+    values (${analyticsDate}, ${visitorHash})
+    on conflict (analytics_date, visitor_hash) do nothing
+    returning visitor_hash
+  `;
+  const isUniqueVisitorForDay = insertedVisitors.length > 0;
+
+  await sql`
+    insert into site_analytics_daily (
+      analytics_date,
+      views,
+      unique_visitors
+    )
+    values (
+      ${analyticsDate},
+      1,
+      ${isUniqueVisitorForDay ? 1 : 0}
+    )
+    on conflict (analytics_date) do update
+    set views = site_analytics_daily.views + 1,
+        unique_visitors = site_analytics_daily.unique_visitors + ${isUniqueVisitorForDay ? 1 : 0},
+        updated_at = now()
+  `;
+}
+
+async function getDurableViewsTotal() {
+  try {
+    await ensureSiteAnalyticsTables();
+    const rows = await sql`
+      select coalesce(sum(views), 0) as views
+      from site_analytics_daily
+    `;
+    const row = rows[0] as { views?: string | number } | undefined;
+
+    return Number(row?.views ?? 0);
+  } catch (error) {
+    console.warn("Failed to read durable site analytics", error);
+    return 0;
+  }
+}
+
+async function persistDailyViewSafely(visitorId: string) {
+  try {
+    await persistDailyView(visitorId);
+  } catch (error) {
+    console.warn("Failed to persist daily site analytics", error);
+  }
+}
+
 export function isSiteAnalyticsEnabled() {
   return redis !== null;
 }
@@ -53,15 +124,16 @@ export async function getSiteAnalyticsSummary(): Promise<SiteAnalyticsSummary> {
   const nowSeconds = Math.floor(Date.now() / 1000);
   await cleanupOfflineVisitors(nowSeconds);
 
-  const [views, onlineNow] = await Promise.all([
+  const [views, onlineNow, durableViews] = await Promise.all([
     redis.get<number>(SITE_VIEWS_KEY),
     redis.zcard(SITE_ONLINE_KEY),
+    getDurableViewsTotal(),
   ]);
 
   return {
     configured: true,
     onlineNow: Number(onlineNow ?? 0),
-    views: Number(views ?? 0),
+    views: Math.max(Number(views ?? 0), durableViews),
   };
 }
 
@@ -100,6 +172,7 @@ export async function trackSiteVisit(input: {
     }),
     redis.expire(SITE_ONLINE_KEY, ONLINE_WINDOW_SECONDS * 3),
     shouldCountView ? redis.incr(SITE_VIEWS_KEY) : Promise.resolve(null),
+    shouldCountView ? persistDailyViewSafely(input.visitorId) : Promise.resolve(null),
   ]);
 
   return {
