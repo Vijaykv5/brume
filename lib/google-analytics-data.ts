@@ -29,6 +29,7 @@ export type GoogleAnalyticsSummary = {
   onlineNow: number;
   views: number;
   missing?: string[];
+  hostname?: string;
 };
 
 export class GoogleAnalyticsDataError extends Error {
@@ -233,7 +234,11 @@ async function postAnalyticsReport(
   return payload;
 }
 
-export async function getGoogleAnalyticsSummary(): Promise<GoogleAnalyticsSummary> {
+function normalizeHostname(hostname: string) {
+  return hostname.trim().replace(/:\d+$/g, "").toLowerCase();
+}
+
+export async function getGoogleAnalyticsSummary(hostname = ""): Promise<GoogleAnalyticsSummary> {
   const config = getAnalyticsConfig();
   if (!config.configured) {
     return {
@@ -247,22 +252,47 @@ export async function getGoogleAnalyticsSummary(): Promise<GoogleAnalyticsSummar
   const token = await getAccessToken(config.clientEmail, config.privateKey);
   const property = `properties/${config.propertyId}`;
   const today = new Date().toISOString().slice(0, 10);
+  const reportHostname = normalizeHostname(
+    process.env.GA_HOSTNAME ?? hostname,
+  );
+  const viewsReportBody: Record<string, unknown> = {
+    dateRanges: [{ startDate: "2020-01-01", endDate: today }],
+    dimensions: [{ name: "hostName" }],
+    metrics: [{ name: "screenPageViews" }],
+    metricAggregations: ["TOTAL"],
+  };
+
+  if (reportHostname && reportHostname !== "localhost") {
+    viewsReportBody.dimensionFilter = {
+      filter: {
+        fieldName: "hostName",
+        stringFilter: {
+          matchType: "EXACT",
+          value: reportHostname,
+        },
+      },
+    };
+  }
 
   const [realtimeReport, viewsReport] = await Promise.all([
     postAnalyticsReport(`${property}:runRealtimeReport`, token, {
+      minuteRanges: [
+        {
+          name: "last_5_minutes",
+          startMinutesAgo: 4,
+          endMinutesAgo: 0,
+        },
+      ],
       metrics: [{ name: "activeUsers" }],
       metricAggregations: ["TOTAL"],
     }),
-    postAnalyticsReport(`${property}:runReport`, token, {
-      dateRanges: [{ startDate: "2020-01-01", endDate: today }],
-      metrics: [{ name: "screenPageViews" }],
-      metricAggregations: ["TOTAL"],
-    }),
+    postAnalyticsReport(`${property}:runReport`, token, viewsReportBody),
   ]);
 
   return {
     configured: true,
     onlineNow: getMetricValue(realtimeReport),
     views: getMetricValue(viewsReport),
+    ...(reportHostname ? { hostname: reportHostname } : {}),
   };
 }
