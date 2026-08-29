@@ -460,6 +460,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 9px;
+  max-width: calc(100vw - 32px);
   padding: 0 16px 0 13px;
   color: rgb(18 31 37 / 94%);
   background: rgb(255 255 255 / 90%);
@@ -469,6 +470,7 @@ body {
   font: inherit;
   font-size: 14px;
   font-weight: 800;
+  white-space: nowrap;
   cursor: pointer;
   backdrop-filter: blur(12px);
   pointer-events: auto;
@@ -478,6 +480,7 @@ body {
   display: grid;
   width: 22px;
   height: 22px;
+  flex: 0 0 22px;
   place-items: center;
   color: white;
   background: rgb(27 43 50 / 94%);

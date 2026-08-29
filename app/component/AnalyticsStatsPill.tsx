@@ -49,6 +49,11 @@ function shouldCountSessionView() {
 export function AnalyticsStatsPill() {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const formatter = useMemo(() => new Intl.NumberFormat("en-US"), []);
+  const visibleSummary = summary ?? {
+    configured: true,
+    onlineNow: 0,
+    views: 0,
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -65,7 +70,13 @@ export function AnalyticsStatsPill() {
         const nextSummary = (await response.json()) as AnalyticsSummary;
         if (!cancelled) setSummary(nextSummary);
       } catch {
-        if (!cancelled) setSummary(null);
+        if (!cancelled) {
+          setSummary((currentSummary) => currentSummary ?? {
+            configured: true,
+            onlineNow: 0,
+            views: 0,
+          });
+        }
       }
     }
 
@@ -87,17 +98,15 @@ export function AnalyticsStatsPill() {
     };
   }, []);
 
-  if (summary?.configured !== true) return null;
-
   return (
     <div className="analytics-stats-pill" aria-live="polite">
       <div className="analytics-stats-online">
         <span aria-hidden="true" />
-        <strong>{formatter.format(summary.onlineNow)}</strong>
+        <strong>{formatter.format(visibleSummary.onlineNow)}</strong>
         <span>online now</span>
       </div>
       <div className="analytics-stats-views">
-        <strong>{formatter.format(summary.views)}</strong>
+        <strong>{formatter.format(visibleSummary.views)}</strong>
         <span>views so far</span>
       </div>
     </div>

@@ -32,11 +32,15 @@ function isValidVisitorId(visitorId: unknown): visitorId is string {
 async function cleanupOfflineVisitors(nowSeconds: number) {
   if (!redis) return;
 
-  await redis.zremrangebyscore(
-    SITE_ONLINE_KEY,
-    0,
-    nowSeconds - ONLINE_WINDOW_SECONDS,
-  );
+  try {
+    await redis.zremrangebyscore(
+      SITE_ONLINE_KEY,
+      0,
+      nowSeconds - ONLINE_WINDOW_SECONDS,
+    );
+  } catch (error) {
+    console.warn("Failed to clean up online visitors", error);
+  }
 }
 
 async function hashVisitorId(visitorId: string) {
@@ -114,26 +118,38 @@ export function isSiteAnalyticsEnabled() {
 
 export async function getSiteAnalyticsSummary(): Promise<SiteAnalyticsSummary> {
   if (!redis) {
+    const durableViews = await getDurableViewsTotal();
+
     return {
-      configured: false,
+      configured: durableViews > 0,
       onlineNow: 0,
-      views: 0,
+      views: durableViews,
     };
   }
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   await cleanupOfflineVisitors(nowSeconds);
 
-  const [views, onlineNow, durableViews] = await Promise.all([
-    redis.get<number>(SITE_VIEWS_KEY),
-    redis.zcard(SITE_ONLINE_KEY),
-    getDurableViewsTotal(),
-  ]);
+  const durableViews = await getDurableViewsTotal();
+  let views = durableViews;
+  let onlineNow = 0;
+
+  try {
+    const [redisViews, redisOnlineNow] = await Promise.all([
+      redis.get<number>(SITE_VIEWS_KEY),
+      redis.zcard(SITE_ONLINE_KEY),
+    ]);
+
+    views = Math.max(Number(redisViews ?? 0), durableViews);
+    onlineNow = Number(redisOnlineNow ?? 0);
+  } catch (error) {
+    console.warn("Failed to read live site analytics", error);
+  }
 
   return {
     configured: true,
-    onlineNow: Number(onlineNow ?? 0),
-    views: Math.max(Number(views ?? 0), durableViews),
+    onlineNow,
+    views,
   };
 }
 
@@ -165,7 +181,7 @@ export async function trackSiteVisit(input: {
   await cleanupOfflineVisitors(nowSeconds);
 
   const shouldCountView = input.countView === true;
-  await Promise.all([
+  const analyticsWrites = [
     redis.zadd(SITE_ONLINE_KEY, {
       score: nowSeconds,
       member: input.visitorId,
@@ -173,7 +189,14 @@ export async function trackSiteVisit(input: {
     redis.expire(SITE_ONLINE_KEY, ONLINE_WINDOW_SECONDS * 3),
     shouldCountView ? redis.incr(SITE_VIEWS_KEY) : Promise.resolve(null),
     shouldCountView ? persistDailyViewSafely(input.visitorId) : Promise.resolve(null),
-  ]);
+  ];
+
+  const writeResults = await Promise.allSettled(analyticsWrites);
+  const failedWrite = writeResults.find((result) => result.status === "rejected");
+
+  if (failedWrite) {
+    console.warn("Failed to write live site analytics", failedWrite.reason);
+  }
 
   return {
     ok: true as const,
