@@ -360,7 +360,15 @@ export function AddBuildingPanel({
   return (
     <>
       <button className="add-building-button" type="button" onClick={handleOpen}>
-        <span aria-hidden="true">+</span>
+        <span aria-hidden="true">
+          <svg viewBox="0 0 32 32" focusable="false">
+            <path
+              d="M9.6 6.4 24.7 18c.8.6.5 1.9-.5 2l-5.1.6 3.4 4.5-3.4 2.5-3.3-4.5-3 4.1c-.6.8-1.9.5-2-.5L7.8 7.8c-.1-1 .9-1.9 1.8-1.4Z"
+            />
+            <path d="M5.9 13.1a10 10 0 0 1 10-10" />
+            <path d="M2.9 15.9a14 14 0 0 1 14-14" />
+          </svg>
+        </span>
         Add your building
       </button>
 

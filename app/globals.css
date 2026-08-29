@@ -261,14 +261,23 @@ body {
 
 .building-hover-clicks span:first-child {
   display: grid;
-  width: 17px;
-  height: 17px;
+  width: 22px;
+  height: 22px;
   place-items: center;
-  color: white;
-  background: rgb(41 58 66 / 90%);
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 900;
+}
+
+.building-hover-clicks svg {
+  width: 20px;
+  height: 20px;
+  overflow: visible;
+}
+
+.building-hover-clicks svg path {
+  fill: none;
+  stroke: rgb(41 58 66 / 92%);
+  stroke-width: 2.35;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .building-hover-clicks strong {
@@ -478,15 +487,33 @@ body {
 
 .add-building-button span {
   display: grid;
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
   place-items: center;
   color: white;
   background: rgb(27 43 50 / 94%);
   border-radius: 999px;
-  font-size: 18px;
-  line-height: 1;
+}
+
+.add-building-button svg {
+  width: 22px;
+  height: 22px;
+  overflow: visible;
+}
+
+.add-building-button svg path:first-child {
+  fill: #18c7a2;
+  stroke: #8df7b4;
+  stroke-width: 0.8;
+  stroke-linejoin: round;
+}
+
+.add-building-button svg path:not(:first-child) {
+  fill: none;
+  stroke: #ddfff0;
+  stroke-width: 2.4;
+  stroke-linecap: round;
 }
 
 .add-building-button:hover {

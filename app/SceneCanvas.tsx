@@ -1069,29 +1069,6 @@ function mergeBuildingsWithLocalCounts(
   ];
 }
 
-function haveSameBuildingPlacements(
-  currentBuildings: AddedBuilding[],
-  nextBuildings: AddedBuilding[],
-) {
-  if (currentBuildings.length !== nextBuildings.length) return false;
-
-  const currentById = new Map(
-    currentBuildings.map((building) => [building.id, building]),
-  );
-
-  return nextBuildings.every((building) => {
-    const currentBuilding = currentById.get(building.id);
-    if (!currentBuilding) return false;
-
-    return (
-      currentBuilding.buildingType === building.buildingType &&
-      currentBuilding.position.every(
-        (value, index) => value === building.position[index],
-      )
-    );
-  });
-}
-
 export function SceneCanvas() {
   const [resetToken, setResetToken] = useState(0);
   const [addedBuildings, setAddedBuildings] = useState<AddedBuilding[]>([]);
@@ -1111,6 +1088,7 @@ export function SceneCanvas() {
   });
   const [addBuildingPanelOpen, setAddBuildingPanelOpen] = useState(false);
   const buildingsSyncInFlightRef = useRef(false);
+  const cameraFramingInitializedRef = useRef(false);
   const completeIntro = useCallback(() => {
     try {
       window.localStorage.setItem(INTRO_STORAGE_KEY, "true");
@@ -1153,13 +1131,10 @@ export function SceneCanvas() {
       setAddedBuildings((currentBuildings) =>
         mergeBuildingsWithLocalCounts(currentBuildings, buildings),
       );
-      setCameraFramingBuildings((currentBuildings) => {
-        const mergedBuildings = mergeBuildingsWithLocalCounts(currentBuildings, buildings);
-
-        return haveSameBuildingPlacements(currentBuildings, mergedBuildings)
-          ? currentBuildings
-          : mergedBuildings;
-      });
+      if (!cameraFramingInitializedRef.current) {
+        cameraFramingInitializedRef.current = true;
+        setCameraFramingBuildings(buildings);
+      }
       setLoadError("");
     } catch (error) {
       if (!quiet) {
