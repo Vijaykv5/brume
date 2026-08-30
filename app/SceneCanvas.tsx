@@ -1,6 +1,6 @@
 "use client";
 
-import { ContactShadows, OrbitControls, Text } from "@react-three/drei";
+import { ContactShadows, OrbitControls } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ComponentRef } from "react";
@@ -571,6 +571,63 @@ function WorldDetails() {
   );
 }
 
+function RevenueSignFace({
+  label,
+  position,
+  rotation,
+}: {
+  label: string;
+  position: [number, number, number];
+  rotation?: [number, number, number];
+}) {
+  const texture = useMemo(() => {
+    if (typeof document === "undefined") return null;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = 1800;
+    canvas.height = 420;
+
+    const context = canvas.getContext("2d");
+    if (!context) return null;
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+
+    const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, "#f9fff4");
+    gradient.addColorStop(1, "#dff3d6");
+    context.fillStyle = gradient;
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    context.strokeStyle = "#9fcf90";
+    context.lineWidth = 18;
+    context.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillStyle = "#0b654a";
+    context.font = '900 156px "Inter", Arial, sans-serif';
+    context.fillText(label, canvas.width / 2, canvas.height / 2 + 4, canvas.width * 0.88);
+
+    const nextTexture = new THREE.CanvasTexture(canvas);
+    nextTexture.colorSpace = THREE.SRGBColorSpace;
+    nextTexture.minFilter = THREE.LinearFilter;
+    nextTexture.magFilter = THREE.LinearFilter;
+    nextTexture.needsUpdate = true;
+    return nextTexture;
+  }, [label]);
+
+  useEffect(() => () => texture?.dispose(), [texture]);
+
+  if (!texture) return null;
+
+  return (
+    <mesh position={position} rotation={rotation}>
+      <planeGeometry args={[4.86, 0.76]} />
+      <meshBasicMaterial map={texture} toneMapped={false} />
+    </mesh>
+  );
+}
+
 function RevenueHelicopter({ totalRevenue }: { totalRevenue: number }) {
   const helicopterRef = useRef<THREE.Group>(null);
   const craftRef = useRef<THREE.Group>(null);
@@ -729,33 +786,12 @@ function RevenueHelicopter({ totalRevenue }: { totalRevenue: number }) {
             <boxGeometry args={[0.1, 0.98, 0.12]} />
             <meshStandardMaterial color="#2e775b" roughness={0.74} />
           </mesh>
-          <Text
-            anchorX="center"
-            anchorY="middle"
-            color="#0b654a"
-            fontSize={0.44}
-            fontWeight={800}
-            maxWidth={4.46}
-            outlineColor="#eef8e8"
-            outlineWidth={0.01}
-            position={[0, -0.01, 0.19]}
-          >
-            {revenueLabel}
-          </Text>
-          <Text
-            anchorX="center"
-            anchorY="middle"
-            color="#0b654a"
-            fontSize={0.44}
-            fontWeight={800}
-            maxWidth={4.46}
-            outlineColor="#eef8e8"
-            outlineWidth={0.01}
+          <RevenueSignFace label={revenueLabel} position={[0, -0.01, 0.19]} />
+          <RevenueSignFace
+            label={revenueLabel}
             position={[0, -0.01, -0.19]}
             rotation={[0, Math.PI, 0]}
-          >
-            {revenueLabel}
-          </Text>
+          />
         </group>
       </group>
     </group>
