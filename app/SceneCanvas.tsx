@@ -1,7 +1,7 @@
 "use client";
 
-import { ContactShadows, OrbitControls } from "@react-three/drei";
-import { Canvas, useThree } from "@react-three/fiber";
+import { ContactShadows, OrbitControls, Text } from "@react-three/drei";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type { ComponentRef } from "react";
 import * as THREE from "three";
@@ -571,6 +571,197 @@ function WorldDetails() {
   );
 }
 
+function RevenueHelicopter({ totalRevenue }: { totalRevenue: number }) {
+  const helicopterRef = useRef<THREE.Group>(null);
+  const craftRef = useRef<THREE.Group>(null);
+  const rotorRef = useRef<THREE.Group>(null);
+  const tailRotorRef = useRef<THREE.Group>(null);
+  const signRef = useRef<THREE.Group>(null);
+  const { camera, size } = useThree();
+  const screenAnchor = useMemo(() => new THREE.Vector3(), []);
+  const cameraDirection = useMemo(() => new THREE.Vector3(), []);
+  const cameraUp = useMemo(() => new THREE.Vector3(), []);
+  const revenueLabel = `Made $${revenueFormatter.format(totalRevenue)} till now`;
+
+  useFrame(({ clock }) => {
+    const elapsedTime = clock.getElapsedTime();
+    const isCompactViewport = size.width < 640;
+    const anchorX = isCompactViewport ? -0.48 : -0.72;
+    const anchorY = isCompactViewport ? 0.76 : 0.89;
+    const anchorDepth = isCompactViewport ? 17 : 28;
+
+    if (helicopterRef.current) {
+      screenAnchor.set(anchorX, anchorY, 0.5).unproject(camera);
+      cameraDirection.copy(screenAnchor).sub(camera.position).normalize();
+      cameraUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
+      helicopterRef.current.position
+        .copy(camera.position)
+        .addScaledVector(cameraDirection, anchorDepth)
+        .addScaledVector(cameraUp, Math.sin(elapsedTime * 1.4) * 0.08);
+      helicopterRef.current.scale.setScalar(isCompactViewport ? 0.36 : 0.42);
+    }
+
+    if (craftRef.current) {
+      craftRef.current.rotation.z =
+        THREE.MathUtils.degToRad(Math.sin(elapsedTime * 1.2) * 1.4);
+    }
+
+    if (rotorRef.current) {
+      rotorRef.current.rotation.y = elapsedTime * 22;
+    }
+
+    if (tailRotorRef.current) {
+      tailRotorRef.current.rotation.x = elapsedTime * 24;
+    }
+
+    if (signRef.current) {
+      signRef.current.rotation.z =
+        THREE.MathUtils.degToRad(Math.sin(elapsedTime * 1.35) * 1.6);
+    }
+  });
+
+  return (
+    <group
+      ref={helicopterRef}
+      rotation={[
+        THREE.MathUtils.degToRad(-8),
+        THREE.MathUtils.degToRad(44),
+        THREE.MathUtils.degToRad(1),
+      ]}
+    >
+      <group ref={craftRef}>
+        <group>
+          <mesh castShadow position={[-0.55, 0, 0]} scale={[1.55, 0.68, 0.82]}>
+            <sphereGeometry args={[1, 18, 12]} />
+            <meshStandardMaterial color="#80b86f" roughness={0.62} metalness={0.04} />
+          </mesh>
+          <mesh castShadow position={[-1.4, 0.02, 0]} scale={[0.72, 0.58, 0.7]}>
+            <sphereGeometry args={[1, 16, 10]} />
+            <meshStandardMaterial color="#eef4b8" roughness={0.58} />
+          </mesh>
+          <mesh castShadow position={[-0.22, 0.25, 0.6]} scale={[0.46, 0.28, 0.08]}>
+            <boxGeometry args={[1, 1, 1]} />
+            <meshStandardMaterial color="#bcecf0" roughness={0.28} metalness={0.02} />
+          </mesh>
+          <mesh castShadow position={[1.1, 0.1, 0]} rotation={[0, 0, -0.08]}>
+            <boxGeometry args={[1.95, 0.18, 0.2]} />
+            <meshStandardMaterial color="#4d9a75" roughness={0.72} />
+          </mesh>
+          <mesh castShadow position={[2.12, 0.26, 0]} rotation={[0, 0, -0.16]}>
+            <boxGeometry args={[0.18, 0.94, 0.42]} />
+            <meshStandardMaterial color="#2f8d74" roughness={0.62} />
+          </mesh>
+          <group ref={tailRotorRef} position={[2.28, 0.16, 0]}>
+            <mesh castShadow>
+              <boxGeometry args={[0.08, 0.08, 0.88]} />
+              <meshStandardMaterial color="#285d61" roughness={0.7} />
+            </mesh>
+            <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
+              <boxGeometry args={[0.08, 0.08, 0.88]} />
+              <meshStandardMaterial color="#285d61" roughness={0.7} />
+            </mesh>
+          </group>
+          <mesh castShadow position={[-0.48, 0.84, 0]}>
+            <cylinderGeometry args={[0.06, 0.07, 0.56, 10]} />
+            <meshStandardMaterial color="#274b4f" roughness={0.7} />
+          </mesh>
+          <group ref={rotorRef} position={[-0.48, 1.14, 0]}>
+            <mesh castShadow>
+              <boxGeometry args={[4.1, 0.04, 0.16]} />
+              <meshStandardMaterial color="#214b50" roughness={0.54} />
+            </mesh>
+            <mesh castShadow rotation={[0, Math.PI / 2, 0]}>
+              <boxGeometry args={[4.1, 0.04, 0.16]} />
+              <meshStandardMaterial color="#386f66" roughness={0.54} />
+            </mesh>
+          </group>
+          <mesh castShadow position={[-0.66, -0.86, -0.5]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.035, 0.035, 2.1, 8]} />
+            <meshStandardMaterial color="#274b4f" roughness={0.78} />
+          </mesh>
+          <mesh castShadow position={[-0.66, -0.86, 0.5]} rotation={[0, 0, Math.PI / 2]}>
+            <cylinderGeometry args={[0.035, 0.035, 2.1, 8]} />
+            <meshStandardMaterial color="#274b4f" roughness={0.78} />
+          </mesh>
+          {[-1.26, -0.1].map((x) => (
+            <mesh
+              key={x}
+              castShadow
+              position={[x, -0.58, 0]}
+              rotation={[Math.PI / 2, 0, 0]}
+            >
+              <cylinderGeometry args={[0.026, 0.026, 1.08, 8]} />
+              <meshStandardMaterial color="#274b4f" roughness={0.78} />
+            </mesh>
+          ))}
+        </group>
+
+        <mesh position={[-0.58, -1.28, 0]} rotation={[0, 0, 0]}>
+          <cylinderGeometry args={[0.014, 0.014, 1.12, 8]} />
+          <meshStandardMaterial color="#4b665d" roughness={0.92} />
+        </mesh>
+        <group ref={signRef} position={[-0.58, -1.92, 0.02]} scale={[1.68, 1.22, 1]}>
+          <mesh castShadow receiveShadow>
+            <boxGeometry args={[5.32, 1.12, 0.24]} />
+            <meshStandardMaterial color="#4f996b" roughness={0.72} />
+          </mesh>
+          <mesh position={[0, 0, 0.12]}>
+            <boxGeometry args={[4.86, 0.76, 0.06]} />
+            <meshStandardMaterial color="#eef8e8" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 0, -0.12]}>
+            <boxGeometry args={[4.86, 0.76, 0.06]} />
+            <meshStandardMaterial color="#eef8e8" roughness={0.7} />
+          </mesh>
+          <mesh position={[0, 0.48, 0.15]}>
+            <boxGeometry args={[5.08, 0.1, 0.12]} />
+            <meshStandardMaterial color="#9fcf90" roughness={0.62} />
+          </mesh>
+          <mesh position={[0, -0.48, 0.15]}>
+            <boxGeometry args={[5.08, 0.1, 0.12]} />
+            <meshStandardMaterial color="#2e775b" roughness={0.74} />
+          </mesh>
+          <mesh position={[-2.5, 0, 0.15]}>
+            <boxGeometry args={[0.1, 0.98, 0.12]} />
+            <meshStandardMaterial color="#2e775b" roughness={0.74} />
+          </mesh>
+          <mesh position={[2.5, 0, 0.15]}>
+            <boxGeometry args={[0.1, 0.98, 0.12]} />
+            <meshStandardMaterial color="#2e775b" roughness={0.74} />
+          </mesh>
+          <Text
+            anchorX="center"
+            anchorY="middle"
+            color="#0b654a"
+            fontSize={0.44}
+            fontWeight={800}
+            maxWidth={4.46}
+            outlineColor="#eef8e8"
+            outlineWidth={0.01}
+            position={[0, -0.01, 0.19]}
+          >
+            {revenueLabel}
+          </Text>
+          <Text
+            anchorX="center"
+            anchorY="middle"
+            color="#0b654a"
+            fontSize={0.44}
+            fontWeight={800}
+            maxWidth={4.46}
+            outlineColor="#eef8e8"
+            outlineWidth={0.01}
+            position={[0, -0.01, -0.19]}
+            rotation={[0, Math.PI, 0]}
+          >
+            {revenueLabel}
+          </Text>
+        </group>
+      </group>
+    </group>
+  );
+}
+
 function EdgeDecorations() {
   return (
     <group position={[0, 0.46, 0]}>
@@ -667,12 +858,14 @@ function AddedWorldBuilding({
 
 function FloatingIsland({
   addedBuildings = [],
+  totalRevenue,
   onHoverBuilding,
   onVisitBuilding,
   onVisitStaticBuilding,
   staticClickCounts,
 }: {
   addedBuildings?: AddedBuilding[];
+  totalRevenue: number;
   onHoverBuilding: (building: BuildingHoverCardData | null) => void;
   onVisitBuilding: (buildingId: string) => void;
   onVisitStaticBuilding: (buildingId: StaticBuildingId) => void;
@@ -685,6 +878,7 @@ function FloatingIsland({
       <RandomTrees />
       <EdgeDecorations />
       <WorldDetails />
+      <RevenueHelicopter totalRevenue={totalRevenue} />
       <SmallOfficeBuilding
         {...SMALL_OFFICE_BUILDING}
         onHoverChange={(hovered) =>
@@ -1089,6 +1283,7 @@ const INTRO_STORAGE_KEY = "buildyourcity:intro-seen";
 const BUILDINGS_SYNC_INTERVAL_MS = 10000;
 const CHECKOUT_FOCUS_POLL_INTERVAL_MS = 2000;
 const CHECKOUT_FOCUS_MAX_POLLS = 30;
+const revenueFormatter = new Intl.NumberFormat("en-US");
 
 function getInitialStaticClickCounts(): Record<StaticBuildingId, number> {
   const emptyCounts = Object.fromEntries(
@@ -1261,6 +1456,14 @@ export function SceneCanvas() {
   const [addBuildingPanelOpen, setAddBuildingPanelOpen] = useState(false);
   const buildingsSyncInFlightRef = useRef(false);
   const cameraFramingInitializedRef = useRef(false);
+  const totalRevenue = useMemo(
+    () =>
+      addedBuildings.reduce(
+        (total, building) => total + Number(building.price || 0),
+        0,
+      ),
+    [addedBuildings],
+  );
   const completeIntro = useCallback(() => {
     try {
       window.localStorage.setItem(INTRO_STORAGE_KEY, "true");
@@ -1579,6 +1782,7 @@ export function SceneCanvas() {
         />
         <FloatingIsland
           addedBuildings={addedBuildings}
+          totalRevenue={totalRevenue}
           onHoverBuilding={setHoveredBuilding}
           onVisitBuilding={handleVisitBuilding}
           onVisitStaticBuilding={handleVisitStaticBuilding}
@@ -1611,6 +1815,9 @@ export function SceneCanvas() {
       </button>
       <AnalyticsStatsPill />
       <ProductIntroOverlay visible={introVisible} />
+      <p className="sr-only" aria-live="polite">
+        Made ${revenueFormatter.format(totalRevenue)} till now
+      </p>
       <RecentBuildingsPanel
         buildings={addedBuildings}
         onFocusBuilding={handleFocusBuilding}

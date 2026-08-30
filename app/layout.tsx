@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Island city - an ai buddy on your mac",
-  description: "Download heyclicky for Mac.",
+  title: "Own your spot - Add Your Website to the Island",
+  description: "Choose a building, add your website, and get featured on Island.",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
