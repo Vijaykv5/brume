@@ -1167,22 +1167,7 @@ body {
   }
 
   .recent-buildings-panel {
-    top: max(178px, calc(env(safe-area-inset-top) + 174px));
-    bottom: auto;
-    left: 12px;
-    width: min(330px, calc(100vw - 24px));
-    max-height: 170px;
-    padding: 8px;
-  }
-
-  .recent-buildings-list {
-    max-height: 116px;
-    overflow-y: auto;
-    padding-right: 1px;
-  }
-
-  .recent-building-item {
-    min-height: 54px;
+    display: none;
   }
 
   .add-building-button {
