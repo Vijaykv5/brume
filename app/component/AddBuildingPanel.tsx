@@ -156,7 +156,7 @@ function BuildingOrderSummary({
       </div>
       <div>
         <span>Company name</span>
-        <strong>{companyName || "Acme"}</strong>
+        <strong>{companyName}</strong>
       </div>
       <div>
         <span>Website</span>
@@ -165,7 +165,7 @@ function BuildingOrderSummary({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={faviconUrl} alt="" aria-hidden="true" />
           )}
-          {domain || "acme.com"}
+          {domain}
         </strong>
       </div>
     </section>
@@ -215,7 +215,6 @@ function WebsiteDetailsForm({
           <input
             type="text"
             autoComplete="organization"
-            placeholder="Acme"
             value={form.companyName}
             onChange={(event) => onChange("companyName", event.target.value)}
           />
@@ -234,7 +233,6 @@ function WebsiteDetailsForm({
               type="text"
               inputMode="url"
               autoComplete="url"
-              placeholder="acme.com"
               value={form.domain}
               onBlur={(event) => onChange("domain", normalizeDomain(event.target.value))}
               onChange={(event) => onChange("domain", event.target.value)}

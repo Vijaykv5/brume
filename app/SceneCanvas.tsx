@@ -6,6 +6,7 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } fr
 import type { ComponentRef } from "react";
 import * as THREE from "three";
 import type { BuildingType, SavedBuilding } from "@/lib/buildings";
+import { getWebsiteFaviconUrl } from "@/lib/favicon";
 import {
   SmallOfficeBuilding,
   type SmallOfficeBuildingProps,
@@ -228,6 +229,48 @@ const TREE_PLACEMENTS: TreePlacement[] = [
     leaf: "#8ac466",
     leafAccent: "#dcf3bb",
   },
+  {
+    position: [-58, 0.46, 6],
+    scale: 1.42,
+    rotation: 0.38,
+    leaf: "#6ea94f",
+    leafAccent: "#c9eaa2",
+  },
+  {
+    position: [64, 0.46, 4],
+    scale: 1.08,
+    rotation: -1.15,
+    leaf: "#7fba5e",
+    leafAccent: "#d5efb1",
+  },
+  {
+    position: [-54, 0.46, -42],
+    scale: 1.18,
+    rotation: 0.88,
+    leaf: "#5f9c46",
+    leafAccent: "#bde28f",
+  },
+  {
+    position: [50, 0.46, 45],
+    scale: 1.34,
+    rotation: -0.42,
+    leaf: "#74b455",
+    leafAccent: "#d8f2b4",
+  },
+  {
+    position: [-12, 0.46, 62],
+    scale: 0.98,
+    rotation: 1.24,
+    leaf: "#88c265",
+    leafAccent: "#ddf3be",
+  },
+  {
+    position: [30, 0.46, -56],
+    scale: 1.52,
+    rotation: -0.96,
+    leaf: "#689f4b",
+    leafAccent: "#c6e79c",
+  },
 ];
 
 function WorldPlot() {
@@ -260,6 +303,14 @@ function GrassPatches() {
         [-2.9, 5.5, 1.4, 0.68, 0.38, "#79b95d"],
         [2.9, 5.3, 1.9, 0.82, -0.18, "#8cca6e"],
         [6.9, 4.6, 1.35, 0.66, 0.22, "#78b75d"],
+        [-48, 18, 3.2, 1.35, 0.38, "#8fca70"],
+        [-32, -44, 2.5, 1.05, -0.4, "#75b75d"],
+        [36, -36, 3.4, 1.25, 0.2, "#9bd780"],
+        [54, 26, 2.7, 1.15, -0.62, "#81bf64"],
+        [-18, 50, 3.1, 1.2, 0.72, "#8aca69"],
+        [18, 54, 2.4, 0.95, -0.28, "#95d078"],
+        [-62, -12, 2.6, 1.1, 0.1, "#78b95e"],
+        [62, -8, 3.0, 1.26, -0.18, "#8dcc6f"],
       ] as const,
     [],
   );
@@ -440,9 +491,41 @@ function Mushroom({
   );
 }
 
+function Pond() {
+  return (
+    <group position={[-33, 0.015, -20]} rotation={[0, -0.28, 0]}>
+      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} scale={[4.6, 2.8, 1]}>
+        <circleGeometry args={[1, 36]} />
+        <meshStandardMaterial
+          color="#57b8d8"
+          roughness={0.28}
+          metalness={0.08}
+          transparent
+          opacity={0.78}
+        />
+      </mesh>
+      <mesh position={[0.65, 0.012, -0.15]} rotation={[-Math.PI / 2, 0, 0.35]} scale={[3.2, 1.45, 1]}>
+        <circleGeometry args={[1, 28]} />
+        <meshStandardMaterial
+          color="#9ee7ef"
+          roughness={0.2}
+          transparent
+          opacity={0.32}
+        />
+      </mesh>
+      <Rock position={[-3.8, 0.1, -0.4]} scale={0.38} />
+      <Rock position={[3.6, 0.1, 0.7]} scale={0.32} />
+      <GrassTuft position={[-4.4, 0, 1.7]} />
+      <GrassTuft position={[4.1, 0, -1.6]} />
+      <GrassTuft position={[1.8, 0, 2.6]} />
+    </group>
+  );
+}
+
 function WorldDetails() {
   return (
     <group position={[0, 0.46, 0]}>
+      <Pond />
       <SoilPatch position={[16, 0.02, -14]} scale={[2.1, 1.1]} rotation={0.3} />
       <SoilPatch position={[-20, 0.02, 8]} scale={[1.6, 0.9]} rotation={-0.45} />
 
@@ -475,6 +558,15 @@ function WorldDetails() {
       <Mushroom position={[15, 0, -5.2]} color="#d8944e" scale={0.8} />
       <Mushroom position={[-18, 0, 14]} color="#c76b56" scale={0.95} />
       <Mushroom position={[26, 0, -15]} color="#d57b5f" scale={0.9} />
+      <GrassTuft position={[-53, 0, 16]} />
+      <GrassTuft position={[-49, 0, 20]} />
+      <GrassTuft position={[41, 0, -39]} />
+      <GrassTuft position={[46, 0, -35]} />
+      <GrassTuft position={[59, 0, 20]} />
+      <GrassTuft position={[55, 0, 29]} />
+      <GrassTuft position={[-17, 0, 55]} />
+      <GrassTuft position={[23, 0, 58]} />
+      <GrassTuft position={[-59, 0, -30]} />
     </group>
   );
 }
@@ -1042,6 +1134,88 @@ function ProductIntroOverlay({
   );
 }
 
+function formatRecentBuildingTime(createdAt: string) {
+  const createdTime = new Date(createdAt).getTime();
+  const elapsedMs = Date.now() - createdTime;
+
+  if (!Number.isFinite(createdTime) || elapsedMs < 60_000) return "just now";
+
+  const elapsedMinutes = Math.floor(elapsedMs / 60_000);
+  if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
+
+  const elapsedHours = Math.floor(elapsedMinutes / 60);
+  if (elapsedHours < 24) return `${elapsedHours}h ago`;
+
+  const elapsedDays = Math.floor(elapsedHours / 24);
+  if (elapsedDays < 7) return `${elapsedDays}d ago`;
+
+  return new Intl.DateTimeFormat("en", {
+    month: "short",
+    day: "numeric",
+  }).format(new Date(createdAt));
+}
+
+function RecentBuildingsPanel({
+  buildings,
+  onFocusBuilding,
+}: {
+  buildings: AddedBuilding[];
+  onFocusBuilding: (building: AddedBuilding) => void;
+}) {
+  const recentBuildings = useMemo(
+    () =>
+      [...buildings]
+        .sort(
+          (firstBuilding, secondBuilding) =>
+            new Date(secondBuilding.createdAt).getTime() -
+            new Date(firstBuilding.createdAt).getTime(),
+        )
+        .slice(0, 4),
+    [buildings],
+  );
+
+  if (recentBuildings.length === 0) return null;
+
+  return (
+    <aside className="recent-buildings-panel" aria-label="Recently added buildings">
+      <div className="recent-buildings-header">
+        <p>Recently Added</p>
+      </div>
+      <div className="recent-buildings-list">
+        {recentBuildings.map((building) => {
+          const faviconUrl = getWebsiteFaviconUrl(building.domain, 64);
+
+          return (
+            <button
+              className={`recent-building-item${
+                building.price === 10 ? " is-premium" : ""
+              }`}
+              key={building.id}
+              type="button"
+              onClick={() => onFocusBuilding(building)}
+            >
+              <span className="recent-building-icon" aria-hidden="true">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={faviconUrl} alt="" />
+              </span>
+              <span className="recent-building-copy">
+                <strong>{building.companyName}</strong>
+                <span>{building.domain}</span>
+              </span>
+              <span className="recent-building-meta">
+                <span>${building.price}</span>
+                <time dateTime={building.createdAt}>
+                  {formatRecentBuildingTime(building.createdAt)}
+                </time>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </aside>
+  );
+}
+
 function mergeBuildingsWithLocalCounts(
   currentBuildings: AddedBuilding[],
   nextBuildings: AddedBuilding[],
@@ -1292,6 +1466,14 @@ export function SceneCanvas() {
     window.location.assign(payload.checkoutUrl);
   };
 
+  const handleFocusBuilding = useCallback((building: AddedBuilding) => {
+    setIntroVisible(false);
+    setCameraFramingBuildings((currentBuildings) =>
+      mergeBuildingIntoList(currentBuildings, building),
+    );
+    setFocusRequest(getAddedBuildingFocusRequest(building));
+  }, []);
+
   const handleVisitBuilding = async (buildingId: string) => {
     const updateLocalClickCount = (delta: number) => {
       setAddedBuildings((currentBuildings) =>
@@ -1429,6 +1611,10 @@ export function SceneCanvas() {
       </button>
       <AnalyticsStatsPill />
       <ProductIntroOverlay visible={introVisible} />
+      <RecentBuildingsPanel
+        buildings={addedBuildings}
+        onFocusBuilding={handleFocusBuilding}
+      />
       <BuildingHoverCard building={hoveredBuilding} />
       <AddBuildingPanel
         onAddBuilding={handleAddBuilding}

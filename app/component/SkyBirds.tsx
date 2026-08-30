@@ -1,7 +1,6 @@
 "use client";
 
-import { Billboard } from "@react-three/drei";
-import { useFrame, useThree } from "@react-three/fiber";
+import { useFrame } from "@react-three/fiber";
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 
@@ -55,9 +54,10 @@ const BIRD_FORMATION: [number, number, number, number, BirdPalette][] = [
   ],
 ];
 const FLIGHT_SPEED = 4.8;
-const FLIGHT_DEPTH = 36;
-const FLIGHT_SCREEN_Y = 0.42;
-const FLIGHT_SCREEN_MARGIN = 0.18;
+const FLIGHT_START_X = -42;
+const FLIGHT_END_X = 48;
+const FLIGHT_BASE_Y = 17;
+const FLIGHT_BASE_Z = -12;
 const FLIGHT_REST_SECONDS = 30;
 const WING_SHAPE = new THREE.Shape()
   .moveTo(0, 0)
@@ -78,75 +78,101 @@ function FlyingBird({
   reducedMotion: boolean;
 }) {
   const birdRef = useRef<THREE.Group>(null);
-  const upperWingRef = useRef<THREE.Group>(null);
-  const lowerWingRef = useRef<THREE.Group>(null);
+  const leftWingRef = useRef<THREE.Group>(null);
+  const rightWingRef = useRef<THREE.Group>(null);
 
   useFrame(({ clock }) => {
-    if (!birdRef.current || !upperWingRef.current || !lowerWingRef.current) return;
+    if (!birdRef.current || !leftWingRef.current || !rightWingRef.current) return;
 
     const elapsed = clock.getElapsedTime();
     const time = elapsed * (reducedMotion ? 1.6 : 7.2) + flapOffset;
     const flap = Math.sin(time);
-    const wingAngle = flap * (reducedMotion ? 0.28 : 0.92);
+    const wingAngle = flap * (reducedMotion ? 0.28 : 0.86);
 
     birdRef.current.position.y = Math.sin(time * 0.45) * 0.04;
-    upperWingRef.current.rotation.z = 0.38 + wingAngle;
-    lowerWingRef.current.rotation.z = -0.3 - wingAngle * 0.72;
+    birdRef.current.rotation.z = Math.sin(time * 0.32) * 0.04;
+    leftWingRef.current.rotation.x = -0.28 - wingAngle;
+    rightWingRef.current.rotation.x = 0.28 + wingAngle;
   });
 
   return (
-    <Billboard position={position} scale={scale} follow raycast={() => null}>
-      <group ref={birdRef}>
-        <group ref={upperWingRef} position={[-0.05, 0.03, 0.02]}>
+    <group position={position} scale={scale} raycast={() => null}>
+      <group ref={birdRef} rotation={[0.04, -0.28, 0]}>
+        <group
+          ref={leftWingRef}
+          position={[-0.04, 0.04, 0.14]}
+          rotation={[-0.28, 0.08, 0.08]}
+        >
           <mesh>
-            <shapeGeometry args={[WING_SHAPE]} />
-            <meshBasicMaterial color={palette.wing} side={THREE.DoubleSide} />
+            <extrudeGeometry
+              args={[WING_SHAPE, { depth: 0.035, bevelEnabled: false }]}
+            />
+            <meshStandardMaterial
+              color={palette.wing}
+              roughness={0.72}
+              metalness={0}
+              side={THREE.DoubleSide}
+            />
           </mesh>
         </group>
         <group
-          ref={lowerWingRef}
-          position={[-0.05, -0.03, 0.02]}
-          scale={[1, -1, 1]}
+          ref={rightWingRef}
+          position={[-0.04, 0.04, -0.14]}
+          rotation={[0.28, -0.08, 0.08]}
+          scale={[1, 1, -1]}
         >
           <mesh>
-            <shapeGeometry args={[WING_SHAPE]} />
-            <meshBasicMaterial color={palette.wing} side={THREE.DoubleSide} />
+            <extrudeGeometry
+              args={[WING_SHAPE, { depth: 0.035, bevelEnabled: false }]}
+            />
+            <meshStandardMaterial
+              color={palette.wing}
+              roughness={0.72}
+              metalness={0}
+              side={THREE.DoubleSide}
+            />
           </mesh>
         </group>
         <mesh scale={[1.28, 0.54, 0.34]}>
-          <sphereGeometry args={[0.16, 12, 8]} />
-          <meshBasicMaterial color={palette.body} />
+          <sphereGeometry args={[0.16, 14, 10]} />
+          <meshStandardMaterial color={palette.body} roughness={0.62} />
         </mesh>
         <mesh position={[0.05, -0.035, 0.01]} scale={[0.86, 0.34, 0.22]}>
-          <sphereGeometry args={[0.13, 10, 6]} />
-          <meshBasicMaterial color={palette.chest} />
+          <sphereGeometry args={[0.13, 12, 8]} />
+          <meshStandardMaterial color={palette.chest} roughness={0.66} />
         </mesh>
         <mesh position={[0.2, 0.02, 0]} scale={[0.7, 0.7, 0.7]}>
-          <sphereGeometry args={[0.09, 10, 6]} />
-          <meshBasicMaterial color={palette.body} />
+          <sphereGeometry args={[0.09, 12, 8]} />
+          <meshStandardMaterial color={palette.body} roughness={0.62} />
         </mesh>
         <mesh position={[0.3, 0.02, 0]} rotation={[0, 0, -Math.PI / 2]}>
           <coneGeometry args={[0.024, 0.13, 4]} />
-          <meshBasicMaterial color={palette.beak} />
+          <meshStandardMaterial color={palette.beak} roughness={0.58} />
         </mesh>
-        <mesh position={[-0.25, 0.035, 0]} rotation={[0, 0, -0.48]}>
-          <boxGeometry args={[0.2, 0.018, 0.02]} />
-          <meshBasicMaterial color={palette.tail} />
+        <mesh
+          position={[-0.25, 0.035, 0.055]}
+          rotation={[0.18, 0.08, -0.56]}
+          scale={[1, 1, 0.65]}
+        >
+          <coneGeometry args={[0.04, 0.24, 3]} />
+          <meshStandardMaterial color={palette.tail} roughness={0.76} />
         </mesh>
-        <mesh position={[-0.25, -0.035, 0]} rotation={[0, 0, 0.48]}>
-          <boxGeometry args={[0.2, 0.018, 0.02]} />
-          <meshBasicMaterial color={palette.tail} />
+        <mesh
+          position={[-0.25, 0.035, -0.055]}
+          rotation={[-0.18, -0.08, -0.56]}
+          scale={[1, 1, 0.65]}
+        >
+          <coneGeometry args={[0.04, 0.24, 3]} />
+          <meshStandardMaterial color={palette.tail} roughness={0.76} />
         </mesh>
       </group>
-    </Billboard>
+    </group>
   );
 }
 
 export function SkyBirds() {
   const groupRef = useRef<THREE.Group>(null);
   const [reducedMotion, setReducedMotion] = useState(false);
-  const camera = useThree((state) => state.camera);
-  const size = useThree((state) => state.size);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -161,38 +187,30 @@ export function SkyBirds() {
   useFrame(({ clock }) => {
     if (!groupRef.current) return;
 
-    const perspectiveCamera = camera as THREE.PerspectiveCamera;
-    const aspect = size.width / Math.max(size.height, 1);
-    const visibleHeight =
-      2 * Math.tan(THREE.MathUtils.degToRad(perspectiveCamera.fov / 2)) * FLIGHT_DEPTH;
-    const visibleWidth = visibleHeight * aspect;
-    const startX = visibleWidth * (-0.5 - FLIGHT_SCREEN_MARGIN);
-    const endX = visibleWidth * (0.5 + FLIGHT_SCREEN_MARGIN);
-    const range = endX - startX;
+    const range = FLIGHT_END_X - FLIGHT_START_X;
     const speed = reducedMotion ? FLIGHT_SPEED * 0.35 : FLIGHT_SPEED;
     const flightDuration = range / speed;
     const cycleDuration = flightDuration + FLIGHT_REST_SECONDS;
     const cycleTime = clock.getElapsedTime() % cycleDuration;
-    const forward = new THREE.Vector3();
-    const right = new THREE.Vector3();
-    const up = new THREE.Vector3();
 
     groupRef.current.visible = cycleTime <= flightDuration;
     if (!groupRef.current.visible) return;
 
-    const progress = cycleTime * speed;
+    const elapsed = clock.getElapsedTime();
+    const progress = cycleTime / flightDuration;
+    const x = FLIGHT_START_X + range * progress;
+    const y = FLIGHT_BASE_Y + Math.sin(elapsed * 0.75) * 0.5;
+    const z = FLIGHT_BASE_Z + Math.sin(progress * Math.PI * 2) * 6;
+    const velocityX = range;
+    const velocityZ = Math.cos(progress * Math.PI * 2) * Math.PI * 12;
+    const travelYaw = Math.atan2(-velocityZ, velocityX);
 
-    camera.getWorldDirection(forward);
-    right.crossVectors(forward, camera.up).normalize();
-    up.crossVectors(right, forward).normalize();
-
-    groupRef.current.quaternion.copy(camera.quaternion);
-    groupRef.current.position
-      .copy(camera.position)
-      .addScaledVector(forward, FLIGHT_DEPTH)
-      .addScaledVector(right, startX + progress)
-      .addScaledVector(up, visibleHeight * FLIGHT_SCREEN_Y)
-      .addScaledVector(up, Math.sin(clock.getElapsedTime() * 0.75) * 0.12);
+    groupRef.current.position.set(x, y, z);
+    groupRef.current.rotation.set(
+      Math.sin(elapsed * 0.55) * 0.04,
+      travelYaw,
+      Math.sin(progress * Math.PI * 2) * -0.16,
+    );
   });
 
   return (

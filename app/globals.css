@@ -172,6 +172,192 @@ body {
   font-weight: 650;
 }
 
+.recent-buildings-panel {
+  position: absolute;
+  left: 16px;
+  top: max(148px, calc(env(safe-area-inset-top) + 148px));
+  z-index: 2;
+  width: min(318px, calc(100vw - 32px));
+  padding: 10px;
+  color: rgb(18 34 42 / 94%);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 58%), rgb(255 255 255 / 38%));
+  border: 1px solid rgb(255 255 255 / 70%);
+  border-radius: 8px;
+  box-shadow:
+    0 18px 42px rgb(36 82 103 / 16%),
+    inset 0 1px 0 rgb(255 255 255 / 72%);
+  backdrop-filter: blur(18px) saturate(1.1);
+}
+
+.recent-buildings-header p {
+  margin: 0;
+  padding: 2px 4px 10px;
+  color: rgb(19 36 44 / 92%);
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+}
+
+.recent-buildings-list {
+  display: grid;
+  gap: 7px;
+}
+
+.recent-building-item {
+  position: relative;
+  display: grid;
+  min-height: 58px;
+  width: 100%;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  color: inherit;
+  background: rgb(255 255 255 / 46%);
+  border: 1px solid rgb(255 255 255 / 62%);
+  border-radius: 8px;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 62%);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.recent-building-item > * {
+  position: relative;
+  z-index: 1;
+}
+
+.recent-building-item.is-premium {
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 62%), rgb(255 255 255 / 48%)),
+    radial-gradient(circle at 18% 12%, rgb(255 238 164 / 44%), transparent 42%);
+  border-color: rgb(251 214 105 / 58%);
+  box-shadow:
+    0 10px 28px rgb(190 138 35 / 12%),
+    inset 0 1px 0 rgb(255 255 255 / 70%);
+}
+
+.recent-building-item.is-premium::before {
+  position: absolute;
+  inset: 0;
+  padding: 1px;
+  content: "";
+  background: linear-gradient(
+    115deg,
+    rgb(255 222 122 / 18%),
+    rgb(255 255 255 / 82%),
+    rgb(240 175 32 / 92%),
+    rgb(255 246 189 / 88%),
+    rgb(255 222 122 / 18%)
+  );
+  border-radius: inherit;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+.recent-building-item.is-premium::after {
+  position: absolute;
+  top: -30%;
+  bottom: -30%;
+  left: -42%;
+  width: 36%;
+  content: "";
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(255 255 255 / 54%),
+    transparent
+  );
+  transform: rotate(14deg);
+}
+
+.recent-building-item:hover {
+  background: rgb(255 255 255 / 62%);
+  transform: translateY(-1px);
+}
+
+.recent-building-item.is-premium:hover {
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 72%), rgb(255 255 255 / 56%)),
+    radial-gradient(circle at 18% 12%, rgb(255 238 164 / 54%), transparent 42%);
+}
+
+.recent-building-item:focus-visible {
+  outline: 3px solid rgb(48 121 168 / 72%);
+  outline-offset: 3px;
+}
+
+.recent-building-icon {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  overflow: hidden;
+  background: rgb(244 249 250 / 84%);
+  border: 1px solid rgb(58 86 98 / 14%);
+  border-radius: 8px;
+}
+
+.recent-building-icon img {
+  display: block;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.recent-building-copy {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+}
+
+.recent-building-copy strong,
+.recent-building-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.recent-building-copy strong {
+  color: rgb(14 28 35 / 96%);
+  font-size: 13px;
+  font-weight: 900;
+  line-height: 1.1;
+}
+
+.recent-building-copy span {
+  color: rgb(47 69 79 / 72%);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.recent-building-meta {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.recent-building-meta span {
+  color: rgb(15 105 48 / 96%);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.recent-building-item.is-premium .recent-building-meta span {
+  color: rgb(134 88 12 / 98%);
+}
+
+.recent-building-meta time {
+  color: rgb(47 69 79 / 62%);
+  font-size: 11px;
+  font-weight: 750;
+}
+
 .building-hover-card {
   position: absolute;
   left: 16px;
@@ -537,31 +723,38 @@ body {
   inset: 0;
   z-index: 3;
   padding: 0;
-  background: rgb(4 19 24 / 22%);
+  background:
+    radial-gradient(circle at 50% 38%, rgb(255 255 255 / 20%), transparent 34%),
+    rgb(6 20 25 / 30%);
   border: 0;
   cursor: default;
   animation: building-overlay-fade 180ms ease-out both;
+  backdrop-filter: blur(7px) saturate(1.04);
 }
 
 .add-building-panel {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  top: 50%;
+  left: 50%;
   z-index: 4;
   display: flex;
-  width: min(410px, calc(100vw - 24px));
-  max-width: calc(100vw - 24px);
+  width: min(720px, calc(100vw - 32px));
+  max-height: min(760px, calc(100dvh - 32px));
   flex-direction: column;
-  gap: 18px;
-  padding: max(18px, env(safe-area-inset-top)) 18px max(18px, env(safe-area-inset-bottom));
+  gap: 20px;
+  padding: 22px;
   overflow-y: auto;
   color: rgb(24 38 44 / 94%);
-  background: rgb(255 255 255 / 88%);
-  border-left: 1px solid rgb(60 90 103 / 16%);
-  box-shadow: -18px 0 46px rgb(20 61 78 / 18%);
-  backdrop-filter: blur(18px);
-  animation: building-panel-slide-in 230ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 92%), rgb(244 250 251 / 88%));
+  border: 1px solid rgb(255 255 255 / 78%);
+  border-radius: 14px;
+  box-shadow:
+    0 24px 70px rgb(17 48 60 / 26%),
+    inset 0 1px 0 rgb(255 255 255 / 88%);
+  transform: translate(-50%, -50%);
+  backdrop-filter: blur(22px) saturate(1.08);
+  animation: building-panel-pop-in 220ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
   pointer-events: auto;
 }
 
@@ -584,20 +777,20 @@ body {
 .building-panel-copy h2 {
   margin: 0;
   color: rgb(13 29 36 / 96%);
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 850;
   letter-spacing: 0;
 }
 
 .building-panel-close {
   display: grid;
-  min-width: 44px;
-  min-height: 44px;
+  min-width: 42px;
+  min-height: 42px;
   place-items: center;
   color: rgb(22 38 45 / 82%);
-  background: rgb(239 244 246 / 82%);
+  background: rgb(239 245 247 / 82%);
   border: 1px solid rgb(60 90 103 / 14%);
-  border-radius: 999px;
+  border-radius: 12px;
   font: inherit;
   font-size: 18px;
   font-weight: 800;
@@ -618,23 +811,30 @@ body {
 
 .building-type-list {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
 }
 
 .building-type-card {
   display: grid;
-  grid-template-columns: 108px 1fr;
+  grid-template-columns: 112px minmax(0, 1fr);
   gap: 12px;
   padding: 12px;
-  background: rgb(255 255 255 / 70%);
-  border: 2px solid rgb(65 93 104 / 12%);
-  border-radius: 8px;
-  box-shadow: 0 8px 22px rgb(31 70 86 / 8%);
+  background: rgb(255 255 255 / 66%);
+  border: 1px solid rgb(65 93 104 / 14%);
+  border-radius: 12px;
+  box-shadow:
+    0 10px 26px rgb(31 70 86 / 8%),
+    inset 0 1px 0 rgb(255 255 255 / 72%);
 }
 
 .building-type-card.is-selected {
-  background: rgb(255 248 218 / 82%);
-  border-color: rgb(231 180 20 / 94%);
+  background:
+    linear-gradient(180deg, rgb(255 251 231 / 86%), rgb(255 245 194 / 72%));
+  border-color: rgb(231 180 20 / 80%);
+  box-shadow:
+    0 14px 34px rgb(190 138 35 / 14%),
+    inset 0 1px 0 rgb(255 255 255 / 80%);
 }
 
 .building-model-preview {
@@ -643,7 +843,7 @@ body {
   overflow: hidden;
   background: linear-gradient(180deg, rgb(190 231 255 / 68%), rgb(132 190 100 / 52%));
   border: 1px solid rgb(67 104 116 / 14%);
-  border-radius: 8px;
+  border-radius: 12px;
 }
 
 .building-type-card-copy {
@@ -676,7 +876,7 @@ body {
 .building-primary-action,
 .building-secondary-action {
   min-height: 42px;
-  border-radius: 8px;
+  border-radius: 10px;
   font: inherit;
   font-size: 13px;
   font-weight: 850;
@@ -876,12 +1076,14 @@ body {
   }
 }
 
-@keyframes building-sheet-slide-in {
+@keyframes building-panel-pop-in {
   from {
-    transform: translateY(100%);
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 12px)) scale(0.97);
   }
   to {
-    transform: translateY(0);
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 }
 
@@ -910,8 +1112,39 @@ body {
     animation: building-hover-card-in 140ms ease-out both;
   }
 
+  .recent-building-item.is-premium::before {
+    animation: premium-listing-border 2.6s linear infinite;
+  }
+
+  .recent-building-item.is-premium::after {
+    animation: premium-listing-sheen 3.2s ease-in-out infinite;
+  }
+
   .hero-action::before {
     animation: hero-action-border-flow 2.8s linear infinite;
+  }
+}
+
+@keyframes premium-listing-border {
+  to {
+    filter: hue-rotate(16deg);
+  }
+}
+
+@keyframes premium-listing-sheen {
+  0%,
+  42% {
+    transform: translateX(0) rotate(14deg);
+    opacity: 0;
+  }
+
+  58% {
+    opacity: 0.8;
+  }
+
+  100% {
+    transform: translateX(390%) rotate(14deg);
+    opacity: 0;
   }
 }
 
@@ -931,6 +1164,25 @@ body {
   .property-panel {
     top: 16px;
     bottom: auto;
+  }
+
+  .recent-buildings-panel {
+    top: max(178px, calc(env(safe-area-inset-top) + 174px));
+    bottom: auto;
+    left: 12px;
+    width: min(330px, calc(100vw - 24px));
+    max-height: 170px;
+    padding: 8px;
+  }
+
+  .recent-buildings-list {
+    max-height: 116px;
+    overflow-y: auto;
+    padding-right: 1px;
+  }
+
+  .recent-building-item {
+    min-height: 54px;
   }
 
   .add-building-button {
@@ -990,18 +1242,21 @@ body {
   }
 
   .add-building-panel {
-    top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: 100vw;
-    max-width: 100vw;
-    max-height: min(82dvh, 720px);
-    border-top: 1px solid rgb(60 90 103 / 16%);
-    border-left: 0;
-    border-radius: 18px 18px 0 0;
-    box-shadow: 0 -18px 46px rgb(20 61 78 / 18%);
-    animation-name: building-sheet-slide-in;
+    top: 50%;
+    left: 50%;
+    right: auto;
+    bottom: auto;
+    width: min(420px, calc(100vw - 24px));
+    max-width: calc(100vw - 24px);
+    max-height: min(88dvh, 720px);
+    padding: 16px;
+    border-radius: 14px;
+    box-shadow: 0 22px 60px rgb(17 48 60 / 28%);
+    animation-name: building-panel-pop-in;
+  }
+
+  .building-type-list {
+    grid-template-columns: 1fr;
   }
 
   .building-type-card {
