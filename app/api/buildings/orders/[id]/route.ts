@@ -35,6 +35,7 @@ export async function GET(_request: Request, { params }: Params) {
         building_orders.id as order_id,
         building_orders.status as order_status,
         buildings.id,
+        buildings.building_order_id,
         buildings.building_type,
         buildings.price_cents,
         buildings.company_name,

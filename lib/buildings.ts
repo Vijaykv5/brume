@@ -21,6 +21,7 @@ export type BuildingFormData = BuildingSubmission & {
 
 export type SavedBuilding = BuildingFormData & {
   id: string;
+  buildingOrderId?: string | null;
   priceCents: 200 | 500 | 700 | 1000;
   position: [number, number, number];
   clickCount: number;

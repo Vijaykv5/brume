@@ -39,6 +39,8 @@ const CITY_FRAMING_BOUNDS = new THREE.Box3(
   new THREE.Vector3(-24, -0.55, -18),
   new THREE.Vector3(26, 0.55, 18),
 );
+const REVENUE_EXCLUDED_BUILDING_ID = "2b68275d-5db0-40dc-8448-4630323f610e";
+const REVENUE_EXCLUDED_BUILDING_ORDER_ID = "17004efa-03a7-455e-af61-631c735efb62";
 type TreePlacement = {
   position: [number, number, number];
   scale: number;
@@ -1267,7 +1269,7 @@ function RecentBuildingsPanel({
                 <span>{building.domain}</span>
               </span>
               <span className="recent-building-meta">
-                <span>${building.price}</span>
+                {!isRevenueExcludedBuilding(building) && <span>${building.price}</span>}
                 <time dateTime={building.createdAt}>
                   {formatRecentBuildingTime(building.createdAt)}
                 </time>
@@ -1305,6 +1307,13 @@ function mergeBuildingsWithLocalCounts(
   ];
 }
 
+function isRevenueExcludedBuilding(building: AddedBuilding) {
+  return (
+    building.id === REVENUE_EXCLUDED_BUILDING_ID ||
+    building.buildingOrderId === REVENUE_EXCLUDED_BUILDING_ORDER_ID
+  );
+}
+
 export function SceneCanvas() {
   const [resetToken, setResetToken] = useState(0);
   const [addedBuildings, setAddedBuildings] = useState<AddedBuilding[]>([]);
@@ -1326,7 +1335,7 @@ export function SceneCanvas() {
   const cameraFramingInitializedRef = useRef(false);
   const totalRevenue = useMemo(
     () =>
-      addedBuildings.reduce(
+      addedBuildings.filter((building) => !isRevenueExcludedBuilding(building)).reduce(
         (total, building) => total + Number(building.price || 0),
         0,
       ),

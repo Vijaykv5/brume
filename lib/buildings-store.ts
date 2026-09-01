@@ -15,6 +15,7 @@ import { ensureBuildingsTable, sql } from "@/lib/db";
 
 export type BuildingRow = {
   id: string;
+  building_order_id?: string | null;
   building_type: string;
   price_cents: number;
   company_name: string;
@@ -43,6 +44,7 @@ export function rowToBuilding(row: BuildingRow): SavedBuilding {
 
   return {
     id: row.id,
+    buildingOrderId: row.building_order_id ?? null,
     buildingType,
     price: option?.price ?? 2,
     priceCents: option?.priceCents ?? 200,
@@ -66,6 +68,7 @@ export async function loadActiveBuildings() {
   const rows = await sql`
     select
       id,
+      building_order_id,
       building_type,
       price_cents,
       company_name,
@@ -122,6 +125,7 @@ export async function createPaidBuilding(input: PaidBuildingInput) {
   const existingBuildingRows = await sql`
     select
       id,
+      building_order_id,
       building_type,
       price_cents,
       company_name,
@@ -199,6 +203,7 @@ export async function createPaidBuilding(input: PaidBuildingInput) {
     )
     returning
       id,
+      building_order_id,
       building_type,
       price_cents,
       company_name,
