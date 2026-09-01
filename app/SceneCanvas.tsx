@@ -9,15 +9,12 @@ import type { BuildingType, SavedBuilding } from "@/lib/buildings";
 import { getWebsiteFaviconUrl } from "@/lib/favicon";
 import {
   SmallOfficeBuilding,
-  type SmallOfficeBuildingProps,
 } from "./component/SmallOfficeBuilding";
 import {
   OfficeBuilding,
-  type OfficeBuildingProps,
 } from "./component/OfficeBuilding";
 import {
   SignalTower,
-  type SignalTowerProps,
 } from "./component/SignalTower";
 import { WebsiteBillboard } from "./component/WebsiteBillboard";
 import {
@@ -42,85 +39,6 @@ const CITY_FRAMING_BOUNDS = new THREE.Box3(
   new THREE.Vector3(-24, -0.55, -18),
   new THREE.Vector3(26, 0.55, 18),
 );
-const BUILDING_BOUNDS = new THREE.Box3(
-  new THREE.Vector3(-9.3, 0.45, -2.65),
-  new THREE.Vector3(-5.1, 4.25, 0.45),
-);
-const OFFICE_BUILDING_BOUNDS = new THREE.Box3(
-  new THREE.Vector3(-1.1, 0.56, -9.2),
-  new THREE.Vector3(5.5, 11.25, -5),
-);
-const SIGNAL_TOWER_BOUNDS = new THREE.Box3(
-  new THREE.Vector3(11.9, 0.46, 0.95),
-  new THREE.Vector3(18.9, 18.1, 6.45),
-);
-const PRICE_BADGE_CENTER = new THREE.Vector3(-5.77, 5, -0.55);
-const PRICE_BADGE_RADIUS = 0.68;
-const SMALL_OFFICE_BUILDING: SmallOfficeBuildingProps = {
-  plotId: "A1",
-  name: "google.com",
-  domain: "google.com",
-  price: "$1",
-  domainUrl: "https://google.com",
-  position: [-7.2, 0.45, -1.1],
-  width: 4.2,
-  height: 3.4,
-  depth: 3.1,
-  primaryColor: "#f3f0e7",
-};
-const STATIC_SMALL_OFFICE_HOVER: BuildingHoverCardData = {
-  id: "static-google",
-  name: "google.com",
-  domain: "google.com",
-  clickCount: 0,
-};
-const OFFICE_BUILDING: OfficeBuildingProps = {
-  plotId: "A2",
-  name: "Hey, clicky",
-  domain: "heyclicky.com",
-  price: "$3",
-  domainUrl: "https://heyclicky.com",
-  position: [2.2, 0.56, -7.1],
-  width: 6.6,
-  height: 10.2,
-  depth: 4.2,
-  showLabels: false,
-};
-const STATIC_OFFICE_HOVER: BuildingHoverCardData = {
-  id: "static-heyclicky",
-  name: "Hey, clicky",
-  domain: "heyclicky.com",
-  clickCount: 0,
-};
-const SIGNAL_TOWER: SignalTowerProps = {
-  plotId: "A4",
-  name: "A4 Tower",
-  domain: "heyclicky.com",
-  price: "$5",
-  domainUrl: "https://heyclicky.com",
-  position: [15.4, 0.56, 3.7],
-  height: 13.4,
-  baseWidth: 7,
-  depth: 5.5,
-};
-const STATIC_TOWER_HOVER: BuildingHoverCardData = {
-  id: "static-tower",
-  name: "A4 Tower",
-  domain: "heyclicky.com",
-  clickCount: 0,
-};
-type StaticBuildingId =
-  | typeof STATIC_SMALL_OFFICE_HOVER.id
-  | typeof STATIC_OFFICE_HOVER.id
-  | typeof STATIC_TOWER_HOVER.id;
-
-const STATIC_BUILDING_CLICK_STORAGE_KEY = "buildyourcity:static-building-clicks";
-const STATIC_BUILDING_IDS = [
-  STATIC_SMALL_OFFICE_HOVER.id,
-  STATIC_OFFICE_HOVER.id,
-  STATIC_TOWER_HOVER.id,
-] as const;
-
 type TreePlacement = {
   position: [number, number, number];
   scale: number;
@@ -897,15 +815,11 @@ function FloatingIsland({
   totalRevenue,
   onHoverBuilding,
   onVisitBuilding,
-  onVisitStaticBuilding,
-  staticClickCounts,
 }: {
   addedBuildings?: AddedBuilding[];
   totalRevenue: number;
   onHoverBuilding: (building: BuildingHoverCardData | null) => void;
   onVisitBuilding: (buildingId: string) => void;
-  onVisitStaticBuilding: (buildingId: StaticBuildingId) => void;
-  staticClickCounts: Record<StaticBuildingId, number>;
 }) {
   return (
     <group>
@@ -915,48 +829,6 @@ function FloatingIsland({
       <EdgeDecorations />
       <WorldDetails />
       <RevenueHelicopter totalRevenue={totalRevenue} />
-      <SmallOfficeBuilding
-        {...SMALL_OFFICE_BUILDING}
-        onHoverChange={(hovered) =>
-          onHoverBuilding(
-            hovered
-              ? {
-                  ...STATIC_SMALL_OFFICE_HOVER,
-                  clickCount: staticClickCounts[STATIC_SMALL_OFFICE_HOVER.id],
-                }
-              : null,
-          )
-        }
-        onVisit={() => onVisitStaticBuilding(STATIC_SMALL_OFFICE_HOVER.id)}
-      />
-      <OfficeBuilding
-        {...OFFICE_BUILDING}
-        onHoverChange={(hovered) =>
-          onHoverBuilding(
-            hovered
-              ? {
-                  ...STATIC_OFFICE_HOVER,
-                  clickCount: staticClickCounts[STATIC_OFFICE_HOVER.id],
-                }
-              : null,
-          )
-        }
-        onVisit={() => onVisitStaticBuilding(STATIC_OFFICE_HOVER.id)}
-      />
-      <SignalTower
-        {...SIGNAL_TOWER}
-        onHoverChange={(hovered) =>
-          onHoverBuilding(
-            hovered
-              ? {
-                  ...STATIC_TOWER_HOVER,
-                  clickCount: staticClickCounts[STATIC_TOWER_HOVER.id],
-                }
-              : null,
-          )
-        }
-        onVisit={() => onVisitStaticBuilding(STATIC_TOWER_HOVER.id)}
-      />
       {addedBuildings.map((building) => (
         <AddedWorldBuilding
           key={building.id}
@@ -979,22 +851,8 @@ function getBoundsCorners(bounds: THREE.Box3) {
   );
 }
 
-function getVisibleScenePoints(right: THREE.Vector3, cameraUp: THREE.Vector3) {
-  const badgeCorners = [-1, 1].flatMap((horizontalDirection) =>
-    [-1, 1].map((verticalDirection) =>
-      PRICE_BADGE_CENTER.clone()
-        .addScaledVector(right, PRICE_BADGE_RADIUS * horizontalDirection)
-        .addScaledVector(cameraUp, PRICE_BADGE_RADIUS * verticalDirection),
-    ),
-  );
-
-  return [
-    ...getBoundsCorners(CITY_FRAMING_BOUNDS),
-    ...getBoundsCorners(BUILDING_BOUNDS),
-    ...getBoundsCorners(OFFICE_BUILDING_BOUNDS),
-    ...getBoundsCorners(SIGNAL_TOWER_BOUNDS),
-    ...badgeCorners,
-  ];
+function getVisibleScenePoints() {
+  return getBoundsCorners(CITY_FRAMING_BOUNDS);
 }
 
 function getAddedBuildingBounds(building: AddedBuilding) {
@@ -1098,7 +956,7 @@ function getCameraFraming(aspect: number, addedBuildings: AddedBuilding[]) {
   const right = new THREE.Vector3().crossVectors(forward, THREE.Object3D.DEFAULT_UP).normalize();
   const cameraUp = new THREE.Vector3().crossVectors(right, forward).normalize();
   const visiblePoints = [
-    ...getVisibleScenePoints(right, cameraUp),
+    ...getVisibleScenePoints(),
     ...getDynamicVisibleScenePoints(right, cameraUp, addedBuildings),
   ];
   const center = getProjectedBoundsCenter(visiblePoints, right, cameraUp);
@@ -1321,31 +1179,6 @@ const CHECKOUT_FOCUS_POLL_INTERVAL_MS = 2000;
 const CHECKOUT_FOCUS_MAX_POLLS = 30;
 const revenueFormatter = new Intl.NumberFormat("en-US");
 
-function getInitialStaticClickCounts(): Record<StaticBuildingId, number> {
-  const emptyCounts = Object.fromEntries(
-    STATIC_BUILDING_IDS.map((buildingId) => [buildingId, 0]),
-  ) as Record<StaticBuildingId, number>;
-
-  if (typeof window === "undefined") return emptyCounts;
-
-  try {
-    const rawCounts = JSON.parse(
-      window.localStorage.getItem(STATIC_BUILDING_CLICK_STORAGE_KEY) ?? "{}",
-    ) as Partial<Record<StaticBuildingId, unknown>>;
-
-    return Object.fromEntries(
-      STATIC_BUILDING_IDS.map((buildingId) => [
-        buildingId,
-        typeof rawCounts[buildingId] === "number"
-          ? Math.max(0, rawCounts[buildingId])
-          : 0,
-      ]),
-    ) as Record<StaticBuildingId, number>;
-  } catch {
-    return emptyCounts;
-  }
-}
-
 function ProductIntroOverlay({
   visible,
 }: {
@@ -1477,7 +1310,6 @@ export function SceneCanvas() {
   const [addedBuildings, setAddedBuildings] = useState<AddedBuilding[]>([]);
   const [cameraFramingBuildings, setCameraFramingBuildings] = useState<AddedBuilding[]>([]);
   const [hoveredBuilding, setHoveredBuilding] = useState<BuildingHoverCardData | null>(null);
-  const [staticClickCounts, setStaticClickCounts] = useState(getInitialStaticClickCounts);
   const [focusRequest, setFocusRequest] = useState<CameraFocusRequest | null>(null);
   const [loadError, setLoadError] = useState("");
   const [introVisible, setIntroVisible] = useState(() => {
@@ -1763,31 +1595,6 @@ export function SceneCanvas() {
     }
   };
 
-  const handleVisitStaticBuilding = (buildingId: StaticBuildingId) => {
-    setStaticClickCounts((currentCounts) => {
-      const nextCounts = {
-        ...currentCounts,
-        [buildingId]: currentCounts[buildingId] + 1,
-      };
-
-      try {
-        window.localStorage.setItem(
-          STATIC_BUILDING_CLICK_STORAGE_KEY,
-          JSON.stringify(nextCounts),
-        );
-      } catch {
-        // Static demo counts are only a local convenience.
-      }
-
-      return nextCounts;
-    });
-    setHoveredBuilding((currentBuilding) =>
-      currentBuilding?.id === buildingId
-        ? { ...currentBuilding, clickCount: currentBuilding.clickCount + 1 }
-        : currentBuilding,
-    );
-  };
-
   return (
     <div className="scene-stage">
       <Canvas
@@ -1821,8 +1628,6 @@ export function SceneCanvas() {
           totalRevenue={totalRevenue}
           onHoverBuilding={setHoveredBuilding}
           onVisitBuilding={handleVisitBuilding}
-          onVisitStaticBuilding={handleVisitStaticBuilding}
-          staticClickCounts={staticClickCounts}
         />
         <SkyBirds />
         <ContactShadows
