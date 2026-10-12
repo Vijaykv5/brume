@@ -119,11 +119,13 @@ export function PlayerAvatar({
   username,
   avatar,
   onSelect,
+  showUsername = true,
 }: {
   motionRef: PlayerMotionRef;
   username: string;
   avatar?: AvatarStyle;
   onSelect?: () => void;
+  showUsername?: boolean;
 }) {
   const visualRef = useRef<THREE.Group>(null);
   const leftArmRef = useRef<THREE.Group>(null);
@@ -302,7 +304,7 @@ export function PlayerAvatar({
         </group>
       </group>
 
-      <UsernameLabel username={username} />
+      {showUsername && <UsernameLabel username={username} />}
     </group>
   );
 }

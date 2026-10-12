@@ -179,6 +179,17 @@ function collectSentSocketMessages(client: CdpClient) {
   return messages;
 }
 
+function collectRuntimeExceptions(client: CdpClient) {
+  const exceptions: string[] = [];
+  client.on("Runtime.exceptionThrown", (params) => {
+    const details = params.exceptionDetails as
+      | { text?: string; exception?: { description?: string } }
+      | undefined;
+    exceptions.push(details?.exception?.description ?? details?.text ?? "Unknown exception");
+  });
+  return exceptions;
+}
+
 async function waitForSocketMessage<TMessage>(
   messages: TMessage[],
   predicate: (message: TMessage) => boolean,
@@ -248,9 +259,51 @@ async function main() {
     const firstSocketMessages = collectSocketMessages(firstClient);
     const secondSocketMessages = collectSocketMessages(secondClient);
     const firstSentSocketMessages = collectSentSocketMessages(firstClient);
+    const firstRuntimeExceptions = collectRuntimeExceptions(firstClient);
     const onlineTextExpression =
       "document.querySelector('.analytics-stats-online')?.textContent?.replace(/\\s+/g, ' ').trim() ?? ''";
     await firstClient.send("Page.navigate", { url: TEST_URL });
+    const initialSurface = await waitForValue(
+      firstClient,
+      `({
+        gate: document.querySelector('.arena-wallet-gate')?.textContent?.includes('Please connect your wallet to engage with the arena') ?? false,
+        world: Boolean(document.querySelector('.scene-stage'))
+      })`,
+      (value: { gate: boolean; world: boolean }) => value.gate || value.world,
+      "wallet gate or arena",
+    );
+    if (initialSurface.gate) {
+      const gateCopy = await evaluate<string>(
+        firstClient,
+        "document.querySelector('.arena-wallet-gate')?.textContent?.replace(/\\s+/g, ' ').trim() ?? ''",
+      );
+      if (
+        !gateCopy.includes("Please connect your wallet to engage with the arena") ||
+        initialSurface.world
+      ) {
+        throw new Error("Disconnected visitors were not fully gated from the arena.");
+      }
+      // The gate HTML is server-rendered, so wait for React to attach the
+      // Wallet Adapter click handler before opening its portal.
+      await Bun.sleep(1_000);
+      await evaluate(
+        firstClient,
+        "document.querySelector('.arena-wallet-gate .wallet-adapter-button')?.click()",
+      );
+      await waitForValue(
+        firstClient,
+        "Boolean(document.querySelector('.wallet-adapter-modal'))",
+        Boolean,
+        "standard wallet adapter modal",
+      );
+      const hydrationError = firstRuntimeExceptions.find((message) =>
+        message.includes("Hydration failed"),
+      );
+      if (hydrationError) throw new Error(hydrationError);
+      console.info("✓ disconnected visitors see the wallet gate and standard adapter modal");
+      console.info("ℹ full two-wallet movement and payment checks require browser wallet extensions");
+      return;
+    }
     await waitForValue(
       firstClient,
       onlineTextExpression,

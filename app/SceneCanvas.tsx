@@ -41,6 +41,11 @@ import { useMultiplayer } from "./world/useMultiplayer";
 import { useNearbyPlayer } from "./world/useNearbyPlayer";
 import { MultiplayerPlayers } from "./world/MultiplayerPlayers";
 import { AvatarCustomizer } from "./world/AvatarCustomizer";
+import { WalletHud } from "./solana/WalletHud";
+import { SolTransferPanel } from "./solana/SolTransferPanel";
+import { PaymentNotifications } from "./solana/PaymentNotifications";
+import { useMagicBlockWorldSession } from "./solana/useMagicBlockWorldSession";
+import { EncounterPanel } from "./world/EncounterPanel";
 import { WorldBillboards } from "./world/WorldBillboard";
 import {
   ControlsTutorial,
@@ -50,7 +55,7 @@ import {
   PlayerInteractionPrompt,
   WorldLoading,
 } from "./world/WorldHud";
-import type { NetworkPlayer } from "@/multiplayer/protocol";
+import type { EncounterKind, NetworkEncounter, NetworkPlayer } from "@/multiplayer/protocol";
 import {
   EDGE_ROCK_PLACEMENTS,
   EXAMPLE_BILLBOARDS,
@@ -868,8 +873,17 @@ function isRevenueExcludedBuilding(building: AddedBuilding) {
   );
 }
 
-export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
-  const multiplayer = useMultiplayer();
+export function SceneCanvas({
+  paymentsEnabled,
+  walletAddress,
+}: {
+  paymentsEnabled: boolean;
+  walletAddress: string;
+}) {
+  const multiplayer = useMultiplayer({
+    walletAddress,
+  });
+  const magicBlock = useMagicBlockWorldSession();
   const [cameraResetToken, setCameraResetToken] = useState(0);
   const [addedBuildings, setAddedBuildings] = useState<AddedBuilding[]>([]);
   const [hoveredBuilding, setHoveredBuilding] = useState<BuildingHoverCardData | null>(null);
@@ -881,7 +895,9 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
   const [loadError, setLoadError] = useState("");
   const [addBuildingPanelOpen, setAddBuildingPanelOpen] = useState(false);
   const [avatarCustomizerOpen, setAvatarCustomizerOpen] = useState(false);
+  const [transferRecipient, setTransferRecipient] = useState<NetworkPlayer | null>(null);
   const buildingsSyncInFlightRef = useRef(false);
+  const settlingEncounterIdsRef = useRef(new Set<string>());
   const playerMotionRef = useRef<PlayerMotionState>({
     position: new THREE.Vector3(...PLAYER_SPAWN),
     velocity: new THREE.Vector3(),
@@ -934,11 +950,50 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
     ],
     [addedBuildings],
   );
-  const activeSelectedPlayer =
-    selectedPlayer &&
-    multiplayer.remotePlayers.some((player) => player.id === selectedPlayer.id)
-      ? selectedPlayer
-      : null;
+  const activeSelectedPlayer = selectedPlayer
+    ? multiplayer.remotePlayers.find((player) => player.id === selectedPlayer.id) ?? null
+    : null;
+  const activeEncounter = multiplayer.activeEncounter;
+
+  const settleEncounter = useCallback((encounter: NetworkEncounter) => {
+    if (
+      encounter.status !== "resolved" ||
+      encounter.settlementSignature ||
+      encounter.initiator.playerId !== multiplayer.localPlayerId ||
+      settlingEncounterIdsRef.current.has(encounter.id)
+    ) return;
+
+    settlingEncounterIdsRef.current.add(encounter.id);
+    const result = encounter.kind === "high_five"
+      ? "high_five"
+      : encounter.result === "initiator_win"
+        ? "rps_win"
+        : encounter.result === "recipient_win"
+          ? "rps_loss"
+          : "rps_draw";
+    void magicBlock
+      .recordEncounter(encounter.recipient.walletAddress, result)
+      .then((signature) => {
+        if (signature) {
+          multiplayer.shareEncounterSettlement(encounter.id, signature);
+        } else {
+          settlingEncounterIdsRef.current.delete(encounter.id);
+        }
+      });
+  }, [magicBlock, multiplayer]);
+
+  useEffect(() => {
+    if (activeEncounter) settleEncounter(activeEncounter);
+  }, [activeEncounter, settleEncounter]);
+
+  const handleStartEncounter = useCallback(async (
+    player: NetworkPlayer,
+    kind: EncounterKind,
+  ) => {
+    setSelectedPlayer(null);
+    const ready = await magicBlock.prepareSession();
+    if (ready) multiplayer.startEncounter(player.id, kind);
+  }, [magicBlock, multiplayer]);
   const handleInteract = useCallback(() => {
     if (nearbyPlayer) {
       setSelectedInteraction(null);
@@ -955,13 +1010,16 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
     setSelectedInteraction(null);
     setSelectedPlayer(null);
     setAvatarCustomizerOpen(false);
+    setTransferRecipient(null);
   }, []);
   const playerInputRef = useWorldKeyboard({
     enabled:
       !addBuildingPanelOpen &&
       !avatarCustomizerOpen &&
+      !transferRecipient &&
       !selectedInteraction &&
-      !activeSelectedPlayer,
+      !activeSelectedPlayer &&
+      !activeEncounter,
     onInteract: handleInteract,
     onEscape: handleEscape,
   });
@@ -1168,6 +1226,7 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
     setSelectedPlayer(null);
     setAddBuildingPanelOpen(false);
     setAvatarCustomizerOpen(true);
+    setTransferRecipient(null);
   }, []);
 
   const handleVisitBuilding = async (buildingId: string) => {
@@ -1305,6 +1364,10 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
         />
       </Canvas>
       <WorldLoading visible={!sceneReady} />
+      <WalletHud
+        profile={multiplayer.localProfile}
+        verificationState={multiplayer.walletVerificationState}
+      />
       <button
         className="reset-camera-button"
         type="button"
@@ -1337,14 +1400,14 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
       <ControlsTutorial />
       <InteractionPrompt
         interaction={
-          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen || avatarCustomizerOpen || nearbyPlayer
+          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen || avatarCustomizerOpen || transferRecipient || activeEncounter || nearbyPlayer
             ? null
             : nearbyInteraction
         }
       />
       <PlayerInteractionPrompt
         player={
-          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen || avatarCustomizerOpen
+          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen || avatarCustomizerOpen || transferRecipient || activeEncounter
             ? null
             : nearbyPlayer
         }
@@ -1362,6 +1425,40 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
         key={activeSelectedPlayer?.id ?? "no-player"}
         player={activeSelectedPlayer}
         onClose={() => setSelectedPlayer(null)}
+        onSendSol={(player) => {
+          setSelectedPlayer(null);
+          setTransferRecipient(player);
+        }}
+        onStartEncounter={(player, kind) => void handleStartEncounter(player, kind)}
+      />
+      <EncounterPanel
+        key={activeEncounter?.id ?? "no-encounter"}
+        encounter={activeEncounter}
+        localPlayerId={multiplayer.localPlayerId}
+        transactionState={magicBlock.transactionState}
+        error={multiplayer.encounterError || magicBlock.error || ""}
+        onRespond={(accepted) => {
+          if (activeEncounter) multiplayer.respondToEncounter(activeEncounter.id, accepted);
+        }}
+        onChoose={(choice) => {
+          if (activeEncounter) multiplayer.chooseEncounterMove(activeEncounter.id, choice);
+        }}
+        onRetrySettlement={() => {
+          if (!activeEncounter) return;
+          settlingEncounterIdsRef.current.delete(activeEncounter.id);
+          settleEncounter(activeEncounter);
+        }}
+        onClose={multiplayer.dismissEncounter}
+      />
+      <SolTransferPanel
+        key={transferRecipient?.id ?? "no-transfer"}
+        recipient={transferRecipient}
+        onClose={() => setTransferRecipient(null)}
+        onConfirmed={multiplayer.sendPaymentReceipt}
+      />
+      <PaymentNotifications
+        receipts={multiplayer.paymentReceipts}
+        onDismiss={multiplayer.dismissPaymentReceipt}
       />
       {avatarCustomizerOpen && (
         <AvatarCustomizer
@@ -1370,6 +1467,7 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
           onSave={(profile) => {
             multiplayer.updateLocalProfile(profile);
             setAvatarCustomizerOpen(false);
+            setTransferRecipient(null);
           }}
         />
       )}

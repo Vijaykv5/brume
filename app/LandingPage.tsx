@@ -1,25 +1,4 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
-
-/* ─────────────────────────────────────────────────────────
- * LANDING PAGE CONTENT STORYBOARD
- *
- * Static shell (navigation, headline, CTA) is usable immediately.
- * Only supporting content cascades in after mount.
- *
- *    0ms   navigation, headline, and primary action are visible
- *   80ms   low-poly world vignette settles into view
- *  180ms   supporting copy and controls note fade upward
- *  300ms   discovery rail fades upward
- * ───────────────────────────────────────────────────────── */
-
-const TIMING = {
-  world: 80, // ms — illustrated world preview
-  context: 180, // ms — supporting copy and controls note
-  rail: 300, // ms — bottom discovery rail
-} as const;
 
 function ArrowUpRightIcon() {
   return (
@@ -43,16 +22,6 @@ function WorldPreview() {
     <div className="landing-world-frame" aria-hidden="true">
       <span className="landing-orbit landing-orbit-one" />
       <span className="landing-orbit landing-orbit-two" />
-
-      <div className="landing-world-note landing-world-note-top">
-        <span>LIVE</span>
-        <strong>THE WORLD IS OPEN</strong>
-      </div>
-
-      <div className="landing-world-note landing-world-note-bottom">
-        <span>09:41</span>
-        <strong>BRUME STANDARD TIME</strong>
-      </div>
 
       <svg className="landing-world-art" viewBox="0 0 760 650" role="presentation">
         <defs>
@@ -156,26 +125,6 @@ function WorldPreview() {
 }
 
 export default function LandingPage() {
-  const [stage, setStage] = useState(0);
-
-  useEffect(() => {
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const timers: number[] = [];
-
-    if (reducedMotion.matches) {
-      timers.push(window.setTimeout(() => setStage(3), 0));
-      return () => timers.forEach(window.clearTimeout);
-    }
-
-    timers.push(
-      window.setTimeout(() => setStage(1), TIMING.world),
-      window.setTimeout(() => setStage(2), TIMING.context),
-      window.setTimeout(() => setStage(3), TIMING.rail),
-    );
-
-    return () => timers.forEach(window.clearTimeout);
-  }, []);
-
   return (
     <main className="brume-landing" aria-labelledby="landing-title">
       <div className="landing-sky" aria-hidden="true">
@@ -198,59 +147,46 @@ export default function LandingPage() {
 
         <div className="landing-header-status" aria-label="World status: online">
           <span />
-          World online
+          Live
         </div>
 
         <Link className="landing-header-action" href="/flash-arena">
-          Enter world
+          Enter
           <ArrowUpRightIcon />
         </Link>
       </header>
 
       <section className="landing-hero">
         <div className="landing-copy">
-          <p className="landing-kicker">Somewhere between a city and the internet.</p>
+          <p className="landing-kicker">A social world on Solana</p>
           <h1 id="landing-title">
-            <span className="landing-heading-lead">Wander into</span>
-            <span className="landing-heading-world">BRUME World.</span>
+            <span className="landing-heading-lead">Meet inside</span>
+            <span className="landing-heading-world">BRUME.</span>
           </h1>
 
-          <div className={`landing-reveal landing-intro ${stage >= 2 ? "is-visible" : ""}`}>
-            <p>
-              Walk the streets, meet new projects, and turn an empty plot into
-              a place people remember.
-            </p>
+          <div className="landing-intro">
+            <p>Walk. Talk. Build.</p>
           </div>
 
           <div className="landing-actions">
             <Link className="landing-primary-action" href="/flash-arena">
-              <span>Enter the world</span>
+              <span>Enter arena</span>
               <ArrowUpRightIcon />
             </Link>
-            <div className={`landing-reveal landing-controls-note ${stage >= 2 ? "is-visible" : ""}`}>
+            <div className="landing-controls-note" aria-label="Use W A S D keys to move">
               <span className="landing-key">W</span>
               <span className="landing-key">A</span>
               <span className="landing-key">S</span>
               <span className="landing-key">D</span>
-              <span>to explore</span>
+              <span>to move</span>
             </div>
           </div>
         </div>
 
-        <div className={`landing-reveal landing-visual ${stage >= 1 ? "is-visible" : ""}`}>
+        <div className="landing-visual">
           <WorldPreview />
         </div>
       </section>
-
-      <div className={`landing-reveal landing-discovery-rail ${stage >= 3 ? "is-visible" : ""}`}>
-        <p>Inside BRUME</p>
-        <ul aria-label="Things to do in BRUME World">
-          <li><span>01</span> Roam freely</li>
-          <li><span>02</span> Discover projects</li>
-          <li><span>03</span> Build your corner</li>
-        </ul>
-        <span className="landing-rail-note">No wallet needed</span>
-      </div>
     </main>
   );
 }

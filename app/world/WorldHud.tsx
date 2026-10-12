@@ -1,8 +1,16 @@
 "use client";
 
 import { useProgress } from "@react-three/drei";
+import { useConnection } from "@solana/wallet-adapter-react";
+import { PublicKey } from "@solana/web3.js";
 import { useEffect, useRef, useState } from "react";
-import type { NetworkPlayer } from "@/multiplayer/protocol";
+import type { EncounterKind, NetworkPlayer } from "@/multiplayer/protocol";
+import {
+  AVATAR_COLOR_OPTIONS,
+  getAvatarColor,
+} from "@/multiplayer/avatar-profile";
+import { shortenWalletAddress } from "../solana/config";
+import { formatLamports } from "../solana/format";
 import type { WorldInteraction } from "./types";
 
 export function ControlsTutorial() {
@@ -84,13 +92,40 @@ export function PlayerInteractionPrompt({
 export function PlayerInteractionPanel({
   player,
   onClose,
+  onSendSol,
+  onStartEncounter,
 }: {
   player: NetworkPlayer | null;
   onClose: () => void;
+  onSendSol: (player: NetworkPlayer) => void;
+  onStartEncounter: (player: NetworkPlayer, kind: EncounterKind) => void;
 }) {
   const panelRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const [showingProfile, setShowingProfile] = useState(false);
+  const [remoteBalance, setRemoteBalance] = useState<number | null>(null);
+  const [remoteBalanceLoading, setRemoteBalanceLoading] = useState(false);
+  const { connection } = useConnection();
+
+  useEffect(() => {
+    if (!player?.walletAddress || !showingProfile) return;
+
+    let disposed = false;
+    connection
+      .getBalance(new PublicKey(player.walletAddress), "confirmed")
+      .then((balance) => {
+        if (!disposed) setRemoteBalance(balance);
+      })
+      .catch(() => {
+        if (!disposed) setRemoteBalance(null);
+      })
+      .finally(() => {
+        if (!disposed) setRemoteBalanceLoading(false);
+      });
+    return () => {
+      disposed = true;
+    };
+  }, [connection, player?.walletAddress, showingProfile]);
 
   useEffect(() => {
     if (!player) return;
@@ -100,7 +135,7 @@ export function PlayerInteractionPanel({
       if (event.key !== "Tab" || !panelRef.current) return;
 
       const focusable = Array.from(
-        panelRef.current.querySelectorAll<HTMLElement>("button:not([disabled])"),
+        panelRef.current.querySelectorAll<HTMLElement>("a[href], button:not([disabled])"),
       );
       const first = focusable[0];
       const last = focusable.at(-1);
@@ -131,7 +166,11 @@ export function PlayerInteractionPanel({
       : player.movementState === "walking"
         ? "Walking nearby"
         : "Standing nearby";
-
+  const outfitColor = getAvatarColor(
+    AVATAR_COLOR_OPTIONS,
+    player.avatar.outfitColor,
+  );
+  const formattedRemoteBalance = formatLamports(remoteBalance);
   return (
     <section
       ref={panelRef}
@@ -140,7 +179,11 @@ export function PlayerInteractionPanel({
       aria-modal="true"
       aria-labelledby="world-player-interaction-title"
     >
-      <div className="world-player-profile-mark" aria-hidden="true">
+      <div
+        className="world-player-profile-mark"
+        style={{ backgroundColor: outfitColor }}
+        aria-hidden="true"
+      >
         <span>{player.username.slice(-4)}</span>
       </div>
       <div className="world-interaction-header">
@@ -166,33 +209,79 @@ export function PlayerInteractionPanel({
 
       {showingProfile && (
         <div className="world-player-profile" role="status">
+          <span>Wallet</span>
+          {player.walletAddress ? (
+            <button
+              type="button"
+              title={player.walletAddress}
+              onClick={() => void navigator.clipboard.writeText(player.walletAddress ?? "")}
+            >
+              {shortenWalletAddress(player.walletAddress)} · Copy
+            </button>
+          ) : (
+            <code>Not connected</code>
+          )}
+          <span>Balance</span>
+          <code
+            aria-label={
+              remoteBalanceLoading
+                ? "Loading SOL balance"
+                : formattedRemoteBalance.ariaLabel
+            }
+          >
+            {remoteBalanceLoading
+              ? "Loading…"
+              : `${formattedRemoteBalance.display} SOL`}
+          </code>
           <span>Session</span>
           <code title={player.id}>{player.id.slice(0, 8)}</code>
-          <p>This explorer is connected to the same BRUME world session.</p>
+          <p>
+            {player.walletAddress
+              ? "This explorer connected this wallet to the current BRUME session."
+              : "This explorer has not connected a wallet in this session."}
+          </p>
         </div>
       )}
 
       <div className="world-player-actions" aria-label="Player actions">
         <button
           type="button"
+          className="world-player-action is-available is-magicblock"
+          disabled={!player.walletAddress}
+          onClick={() => onStartEncounter(player, "rps")}
+        >
+          <span>Play Rock Paper Scissors</span>
+          <small>{player.walletAddress ? "Verifiable MagicBlock match" : "Both wallets required"}</small>
+        </button>
+        <button
+          type="button"
+          className="world-player-action is-available is-encounter-secondary"
+          disabled={!player.walletAddress}
+          onClick={() => onStartEncounter(player, "high_five")}
+        >
+          <span>Send a high five</span>
+          <small>Shared encounter receipt</small>
+        </button>
+        <button
+          type="button"
           className="world-player-action is-available"
           aria-pressed={showingProfile}
-          onClick={() => setShowingProfile((visible) => !visible)}
+          onClick={() => {
+            setShowingProfile((visible) => !visible);
+            if (player.walletAddress) setRemoteBalanceLoading(true);
+          }}
         >
           <span>View Player</span>
           <small>{showingProfile ? "Hide profile" : "Open profile"}</small>
         </button>
-        <button type="button" className="world-player-action" disabled>
-          <span>Request Chat</span>
-          <small>Coming Soon</small>
-        </button>
-        <button type="button" className="world-player-action" disabled>
-          <span>Send SOL</span>
-          <small>Coming Soon</small>
-        </button>
-        <button type="button" className="world-player-action" disabled>
-          <span>Request Gas</span>
-          <small>Coming Soon</small>
+        <button
+          type="button"
+          className={player.walletAddress ? "world-player-action is-available" : "world-player-action"}
+          disabled={!player.walletAddress}
+          onClick={() => onSendSol(player)}
+        >
+          <span>Send SOL or asset</span>
+          <small>{player.walletAddress ? "Direct wallet transfer" : "Wallet required"}</small>
         </button>
       </div>
       <p className="world-interaction-hint">Press Escape to close</p>

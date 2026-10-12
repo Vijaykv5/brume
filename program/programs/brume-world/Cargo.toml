@@ -1,0 +1,26 @@
+[package]
+name = "brume-world"
+version = "0.1.0"
+description = "BRUME World session state for Solana and MagicBlock Ephemeral Rollups"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "brume_world"
+
+[features]
+default = []
+cpi = ["no-entrypoint"]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+idl-build = ["anchor-lang/idl-build"]
+custom-heap = []
+custom-panic = []
+anchor-debug = []
+
+[dependencies]
+anchor-lang = "=1.1.2"
+ephemeral-rollups-sdk = { version = "=0.17.3", features = ["anchor"] }
+session-keys = { version = "=3.1.1", features = ["no-entrypoint"] }
+

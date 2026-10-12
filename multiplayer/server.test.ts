@@ -73,6 +73,7 @@ async function connectClient(
   url: string,
   resumeToken?: string,
   profile?: PlayerProfile,
+  walletAddress?: string,
 ) {
   const client = new TestClient(url);
   await new Promise<void>((resolve, reject) => {
@@ -87,6 +88,7 @@ async function connectClient(
         protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
         ...(resumeToken ? { resumeToken } : {}),
         ...(profile ? { profile } : {}),
+        ...(walletAddress ? { walletAddress } : {}),
       });
       resolve();
     });
@@ -99,18 +101,29 @@ async function connectClient(
 describe("BRUME multiplayer server", () => {
   let multiplayerServer: ReturnType<typeof createMultiplayerServer>;
   let socketUrl: string;
+  const storedProfiles = new Map<string, PlayerProfile>();
 
   beforeAll(() => {
+    const testPort = 20_000 + Math.floor(Math.random() * 20_000);
     multiplayerServer = createMultiplayerServer({
-      port: 0,
+      port: testPort,
       hostname: "127.0.0.1",
       logger: { info() {}, warn() {}, error() {} },
+      verifyEncounterSettlement: async () => true,
+      profileStore: {
+        async get(walletAddress) {
+          return storedProfiles.get(walletAddress) ?? null;
+        },
+        async set(walletAddress, profile) {
+          storedProfiles.set(walletAddress, profile);
+        },
+      },
     });
     socketUrl = `ws://127.0.0.1:${multiplayerServer.port}${MULTIPLAYER_PATH}`;
   });
 
   afterAll(() => {
-    multiplayerServer.stop();
+    multiplayerServer?.stop();
   });
 
   test("falls back safely for legacy players without avatar data", () => {
@@ -122,6 +135,67 @@ describe("BRUME multiplayer server", () => {
       outfitColor: "coral",
       hatStyle: "none",
     });
+  });
+
+  test("runs a private-choice RPS encounter and shares its settlement", async () => {
+    const first = await connectClient(socketUrl, undefined, createDefaultPlayerProfile("Nova"));
+    const second = await connectClient(socketUrl, undefined, createDefaultPlayerProfile("Moss"));
+    const firstWallet = "11111111111111111111111111111111";
+    const secondWallet = "SysvarRent111111111111111111111111111111111";
+
+    first.client.send({ type: "wallet_connected", walletAddress: firstWallet });
+    second.client.send({ type: "wallet_connected", walletAddress: secondWallet });
+    await first.client.waitFor((message) => message.type === "wallet_verified");
+    await second.client.waitFor((message) => message.type === "wallet_verified");
+
+    first.client.send({
+      type: "encounter_request",
+      targetPlayerId: second.welcome.playerId,
+      kind: "rps",
+    });
+    const invite = await second.client.waitFor(
+      (message) => message.type === "encounter_updated" && message.encounter.status === "invited",
+    );
+    expect(invite.type).toBe("encounter_updated");
+    if (invite.type !== "encounter_updated") throw new Error("Missing encounter invite.");
+
+    second.client.send({
+      type: "encounter_response",
+      encounterId: invite.encounter.id,
+      accepted: true,
+    });
+    await first.client.waitFor(
+      (message) => message.type === "encounter_updated" && message.encounter.status === "choosing",
+    );
+
+    first.client.send({ type: "encounter_choice", encounterId: invite.encounter.id, choice: "rock" });
+    second.client.send({ type: "encounter_choice", encounterId: invite.encounter.id, choice: "scissors" });
+    const result = await first.client.waitFor(
+      (message) => message.type === "encounter_updated" && message.encounter.status === "resolved",
+    );
+    expect(result.type).toBe("encounter_updated");
+    if (result.type === "encounter_updated") {
+      expect(result.encounter.result).toBe("initiator_win");
+      expect(result.encounter.initiatorChoice).toBe("rock");
+      expect(result.encounter.recipientChoice).toBe("scissors");
+      expect(result.encounter.winnerPlayerId).toBe(first.welcome.playerId);
+    }
+
+    const signature = "1".repeat(64);
+    first.client.send({
+      type: "encounter_settlement",
+      encounterId: invite.encounter.id,
+      signature,
+    });
+    const settled = await second.client.waitFor(
+      (message) =>
+        message.type === "encounter_updated" &&
+        message.encounter.settlementSignature === signature,
+    );
+    expect(settled.type).toBe("encounter_updated");
+
+    first.client.close();
+    second.client.close();
   });
 
   test("joins, synchronizes, validates, leaves, and resumes a session", async () => {
@@ -138,6 +212,35 @@ describe("BRUME multiplayer server", () => {
     expect(second.welcome.players.some((player) => player.id === first.welcome.playerId)).toBe(true);
     await joinedMessage;
 
+    const walletAddress = "11111111111111111111111111111111";
+    const persistedProfile = createDefaultPlayerProfile("Redis Explorer");
+    persistedProfile.avatar = {
+      ...persistedProfile.avatar,
+      outfitColor: "violet",
+      hatStyle: "beanie",
+    };
+    storedProfiles.set(walletAddress, persistedProfile);
+    const walletProfileUpdate = second.client.waitFor(
+      (message) =>
+        message.type === "player_profile_updated" &&
+        message.player.walletAddress === walletAddress &&
+        message.player.username === "Redis Explorer",
+    );
+    first.client.send({
+      type: "wallet_connected",
+      walletAddress,
+    });
+    const walletVerified = await first.client.waitFor(
+      (message) => message.type === "wallet_verified",
+    );
+    expect(walletVerified.type).toBe("wallet_verified");
+    if (walletVerified.type === "wallet_verified") {
+      expect(walletVerified.player.walletAddress).toBe(walletAddress);
+      expect(walletVerified.player.username).toBe("Redis Explorer");
+      expect(walletVerified.player.avatar.hatStyle).toBe("beanie");
+    }
+    await walletProfileUpdate;
+
     const customizedProfile = createDefaultPlayerProfile("Mint Voyager");
     customizedProfile.avatar = {
       ...customizedProfile.avatar,
@@ -149,7 +252,8 @@ describe("BRUME multiplayer server", () => {
     const profileUpdate = await second.client.waitFor(
       (message) =>
         message.type === "player_profile_updated" &&
-        message.player.id === first.welcome.playerId,
+        message.player.id === first.welcome.playerId &&
+        message.player.username === "Mint Voyager",
     );
     expect(profileUpdate.type).toBe("player_profile_updated");
     if (profileUpdate.type === "player_profile_updated") {
@@ -157,6 +261,8 @@ describe("BRUME multiplayer server", () => {
       expect(profileUpdate.player.avatar.outfitColor).toBe("coral");
       expect(profileUpdate.player.avatar.hatStyle).toBe("cap");
     }
+    expect(storedProfiles.get(walletAddress)?.username).toBe("Mint Voyager");
+    expect(storedProfiles.get(walletAddress)?.avatar.hatColor).toBe("gold");
 
     first.client.send({
       type: "move",
@@ -227,5 +333,18 @@ describe("BRUME multiplayer server", () => {
 
     resumed.client.close();
     first.client.close();
+  });
+
+  test("attaches a persisted wallet profile during the initial handshake", async () => {
+    const walletAddress = "Vote111111111111111111111111111111111111111";
+    const profile = createDefaultPlayerProfile("Onchain Neighbor");
+    profile.avatar = { ...profile.avatar, outfitColor: "gold", hatStyle: "bucket" };
+    storedProfiles.set(walletAddress, profile);
+
+    const connected = await connectClient(socketUrl, undefined, undefined, walletAddress);
+    expect(connected.welcome.self.walletAddress).toBe(walletAddress);
+    expect(connected.welcome.self.username).toBe("Onchain Neighbor");
+    expect(connected.welcome.self.avatar.hatStyle).toBe("bucket");
+    connected.client.close();
   });
 });

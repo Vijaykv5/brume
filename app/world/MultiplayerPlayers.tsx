@@ -20,53 +20,53 @@ function dampAngle(current: number, target: number, sharpness: number, delta: nu
 }
 
 function RemotePlayer({
-  initialPlayer,
+  player,
   playersRef,
 }: {
-  initialPlayer: NetworkPlayer;
+  player: NetworkPlayer;
   playersRef: MutableRefObject<Map<string, NetworkPlayer>>;
 }) {
-  const playerId = initialPlayer.id;
+  const playerId = player.id;
   const groupRef = useRef<THREE.Group>(null);
   const motionRef = useRef<PlayerMotionState>({
     position: new THREE.Vector3(
-      initialPlayer.x,
-      initialPlayer.y,
-      initialPlayer.z,
+      player.x,
+      player.y,
+      player.z,
     ),
     velocity: new THREE.Vector3(),
-    heading: initialPlayer.heading,
-    moving: initialPlayer.movementState !== "idle",
-    running: initialPlayer.movementState === "running",
+    heading: player.heading,
+    moving: player.movementState !== "idle",
+    running: player.movementState === "running",
   });
   const targetPositionRef = useRef(new THREE.Vector3());
   const previousPositionRef = useRef(new THREE.Vector3());
 
   useLayoutEffect(() => {
     const group = groupRef.current;
-    const player = playersRef.current.get(playerId);
-    if (!group || !player) return;
-    group.position.set(player.x, player.y, player.z);
-    group.rotation.y = player.heading;
+    const latestPlayer = playersRef.current.get(playerId);
+    if (!group || !latestPlayer) return;
+    group.position.set(latestPlayer.x, latestPlayer.y, latestPlayer.z);
+    group.rotation.y = latestPlayer.heading;
   }, [playerId, playersRef]);
 
   useFrame((_, rawDelta) => {
     const group = groupRef.current;
-    const player = playersRef.current.get(playerId);
-    if (!group || !player) return;
+    const latestPlayer = playersRef.current.get(playerId) ?? player;
+    if (!group) return;
 
     const delta = Math.min(rawDelta, 0.05);
     const alpha = 1 - Math.exp(-REMOTE_INTERPOLATION_SHARPNESS * delta);
     const targetPosition = targetPositionRef.current.set(
-      player.x,
-      player.y,
-      player.z,
+      latestPlayer.x,
+      latestPlayer.y,
+      latestPlayer.z,
     );
     const previousPosition = previousPositionRef.current.copy(group.position);
     group.position.lerp(targetPosition, alpha);
     group.rotation.y = dampAngle(
       group.rotation.y,
-      player.heading,
+      latestPlayer.heading,
       REMOTE_INTERPOLATION_SHARPNESS,
       delta,
     );
@@ -77,20 +77,16 @@ function RemotePlayer({
       .sub(previousPosition)
       .divideScalar(Math.max(delta, 0.001));
     motionRef.current.heading = group.rotation.y;
-    motionRef.current.moving = player.movementState !== "idle";
-    motionRef.current.running = player.movementState === "running";
+    motionRef.current.moving = latestPlayer.movementState !== "idle";
+    motionRef.current.running = latestPlayer.movementState === "running";
   }, -1.4);
 
   return (
-    <group
-      ref={groupRef}
-      position={[initialPlayer.x, initialPlayer.y, initialPlayer.z]}
-      rotation={[0, initialPlayer.heading, 0]}
-    >
+    <group ref={groupRef}>
       <PlayerAvatar
         motionRef={motionRef}
-        username={initialPlayer.username}
-        avatar={initialPlayer.avatar}
+        username={player.username}
+        avatar={player.avatar}
       />
     </group>
   );
@@ -136,7 +132,7 @@ export function MultiplayerPlayers({
       {players.map((player) => (
         <RemotePlayer
           key={player.id}
-          initialPlayer={player}
+          player={player}
           playersRef={playersRef}
         />
       ))}

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import { SceneCanvas } from "../SceneCanvas";
 import { isDodoPaymentsEnabled } from "@/lib/payment-config";
+import { ArenaWalletGate } from "./ArenaWalletGate";
 
 export const metadata: Metadata = {
   title: "Explore",
@@ -8,9 +8,5 @@ export const metadata: Metadata = {
 };
 
 export default function FlashArenaPage() {
-  return (
-    <main className="scene-shell" aria-label="BRUME World interactive city">
-      <SceneCanvas paymentsEnabled={isDodoPaymentsEnabled()} />
-    </main>
-  );
+  return <ArenaWalletGate paymentsEnabled={isDodoPaymentsEnabled()} />;
 }
