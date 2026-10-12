@@ -17,6 +17,7 @@
     "test:chain": "cargo test --manifest-path program/Cargo.toml --workspace --all-targets",
     "test:chain:integration": "bun test program/tests/world-session.integration.test.ts --timeout 120000",
     "test:chain:session:devnet": "bun run program/scripts/verify-session-devnet.ts",
+    "typecheck:chain": "bunx tsc --project program/tsconfig.json --noEmit",
     "build:chain": "cd program && anchor build",
     "dev:magicblock": "npx --yes --package @magicblock-labs/ephemeral-validator@0.14.10 mb-stack --reset --ledger program/test-ledger",
     "deploy:chain:local": "solana program deploy program/target/deploy/brume_world.so --program-id program/target/deploy/brume_world-keypair.json --url http://127.0.0.1:8899",
