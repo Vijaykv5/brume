@@ -405,7 +405,9 @@ export function createMultiplayerServer({
 }
 
 if (import.meta.main) {
-  const configuredPort = Number(process.env.MULTIPLAYER_PORT ?? DEFAULT_PORT);
+  const configuredPort = Number(
+    process.env.MULTIPLAYER_PORT ?? process.env.PORT ?? DEFAULT_PORT,
+  );
   const allowedOrigins = (process.env.MULTIPLAYER_ALLOWED_ORIGINS ?? "")
     .split(",")
     .map((origin) => origin.trim())
