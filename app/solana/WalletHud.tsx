@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
 import {
   AVATAR_COLOR_OPTIONS,
   getAvatarColor,
@@ -83,7 +82,6 @@ export function WalletHud({
         <a href={getExplorerUrl("address", address)} target="_blank" rel="noreferrer">
           Explorer ↗
         </a>
-        <WalletMultiButton />
       </div>
     </aside>
   );

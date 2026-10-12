@@ -846,30 +846,31 @@ body {
 
 .wallet-hud {
   position: absolute;
-  top: max(16px, env(safe-area-inset-top));
+  top: auto;
+  bottom: max(16px, env(safe-area-inset-bottom));
   left: 16px;
   z-index: 4;
   width: min(318px, calc(100vw - 32px));
-  padding: 10px;
+  padding: 12px;
   color: var(--world-hud-text);
   background: var(--world-hud-surface-strong);
   border: 1px solid var(--world-hud-border);
-  border-radius: 11px;
+  border-radius: 14px;
   box-shadow: 0 16px 38px var(--world-hud-shadow);
   backdrop-filter: blur(18px) saturate(1.08);
 }
 
 .wallet-hud-profile {
   display: grid;
-  grid-template-columns: 38px minmax(0, 1fr) auto;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
   align-items: center;
   gap: 9px;
 }
 
 .wallet-hud-avatar {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   place-items: center;
   color: white;
   border: 2px solid rgb(255 255 255 / 82%);
@@ -892,25 +893,25 @@ body {
 }
 
 .wallet-hud-profile button {
-  min-height: 22px;
+  min-height: 40px;
   width: fit-content;
   padding: 0;
   color: var(--world-hud-muted);
   background: transparent;
   border: 0;
-  font: 750 11px ui-monospace, "SFMono-Regular", Consolas, monospace;
+  font: 750 12px ui-monospace, "SFMono-Regular", Consolas, monospace;
   cursor: pointer;
 }
 
 .wallet-hud-verification {
   display: inline-flex;
-  min-height: 24px;
+  min-height: 28px;
   align-items: center;
   padding: 0 8px;
   color: rgb(91 74 20 / 94%);
   background: rgb(255 238 166 / 78%);
   border-radius: 999px;
-  font-size: 9px;
+  font-size: 12px;
   font-weight: 850;
   text-transform: uppercase;
 }
@@ -922,41 +923,41 @@ body {
 
 .wallet-hud-balance {
   display: flex;
-  min-height: 38px;
+  min-height: 46px;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 8px;
-  padding: 0 9px;
+  margin-top: 10px;
+  padding: 0 12px;
   background: rgb(233 243 239 / 72%);
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .wallet-hud-balance > span:first-child {
   color: var(--world-hud-muted);
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 750;
 }
 
 .wallet-hud-balance strong {
   font-family: ui-monospace, "SFMono-Regular", Consolas, monospace;
-  font-size: 14px;
+  font-size: 16px;
   font-variant-numeric: tabular-nums;
 }
 
 .wallet-hud-balance strong small {
-  font-size: 9px;
+  font-size: 11px;
 }
 
 .wallet-hud-balance button {
-  min-height: 30px;
+  min-height: 40px;
   padding: 0 8px;
   color: #8f332c;
   background: rgb(255 236 232 / 86%);
   border: 1px solid rgb(176 55 47 / 18%);
   border-radius: 6px;
   font: inherit;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 800;
   cursor: pointer;
 }
@@ -971,9 +972,9 @@ body {
 .wallet-hud-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 8px;
-  margin-top: 8px;
+  margin-top: 6px;
 }
 
 .wallet-hud-actions > a {
@@ -982,20 +983,9 @@ body {
   align-items: center;
   padding: 0 8px;
   color: rgb(18 88 74 / 96%);
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 800;
   text-decoration: none;
-}
-
-.wallet-hud-actions .wallet-adapter-button {
-  min-height: 40px;
-  height: 40px;
-  max-width: 178px;
-  overflow: hidden;
-  padding: 0 12px;
-  border-radius: 8px;
-  font-size: 11px;
-  text-overflow: ellipsis;
 }
 
 .sol-transfer-panel {
@@ -1317,7 +1307,7 @@ body {
 .payment-notifications {
   position: absolute;
   left: 16px;
-  bottom: max(16px, env(safe-area-inset-bottom));
+  bottom: max(198px, calc(env(safe-area-inset-bottom) + 198px));
   z-index: 11;
   display: grid;
   width: min(360px, calc(100vw - 32px));
@@ -4275,16 +4265,16 @@ body {
   }
 
   .wallet-hud {
-    top: max(60px, calc(env(safe-area-inset-top) + 56px));
+    top: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
     left: 12px;
-    width: min(272px, calc(100vw - 24px));
+    width: min(318px, calc(100vw - 24px));
   }
 
-  .wallet-hud-balance { min-height: 34px; }
+  .wallet-hud-balance { min-height: 42px; }
 
-  .wallet-hud-actions .wallet-adapter-button {
-    max-width: 152px;
-    padding-inline: 9px;
+  .payment-notifications {
+    bottom: max(198px, calc(env(safe-area-inset-bottom) + 198px));
   }
 
   .sol-transfer-panel {

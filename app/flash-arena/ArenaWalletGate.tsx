@@ -112,7 +112,7 @@ function isStoredProofValid(
   }
 }
 
-function WalletGateContent({ paymentsEnabled }: { paymentsEnabled: boolean }) {
+function WalletGateContent() {
   const {
     connected,
     connecting,
@@ -280,7 +280,6 @@ function WalletGateContent({ paymentsEnabled }: { paymentsEnabled: boolean }) {
       <main className="scene-shell" aria-label="BRUME World interactive city">
         <SceneCanvas
           key={publicKey.toBase58()}
-          paymentsEnabled={paymentsEnabled}
           walletAddress={publicKey.toBase58()}
         />
       </main>
@@ -303,10 +302,10 @@ function WalletGateContent({ paymentsEnabled }: { paymentsEnabled: boolean }) {
   );
 }
 
-export function ArenaWalletGate({ paymentsEnabled }: { paymentsEnabled: boolean }) {
+export function ArenaWalletGate() {
   return (
     <SolanaProvider>
-      <WalletGateContent paymentsEnabled={paymentsEnabled} />
+      <WalletGateContent />
     </SolanaProvider>
   );
 }

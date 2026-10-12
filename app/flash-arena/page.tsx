@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { isDodoPaymentsEnabled } from "@/lib/payment-config";
 import { ArenaWalletGate } from "./ArenaWalletGate";
 
 export const metadata: Metadata = {
@@ -8,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function FlashArenaPage() {
-  return <ArenaWalletGate paymentsEnabled={isDodoPaymentsEnabled()} />;
+  return <ArenaWalletGate />;
 }

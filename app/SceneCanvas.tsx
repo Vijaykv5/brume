@@ -16,10 +16,6 @@ import {
   SignalTower,
 } from "./component/SignalTower";
 import { WebsiteBillboard } from "./component/WebsiteBillboard";
-import {
-  AddBuildingPanel,
-  type BuildingPreviewData,
-} from "./component/AddBuildingPanel";
 import { AnalyticsStatsPill } from "./component/AnalyticsStatsPill";
 import {
   BuildingHoverCard,
@@ -352,12 +348,10 @@ function WorldDetails() {
   );
 }
 
-function RevenueSignFace({
-  label,
+function WelcomeSignFace({
   position,
   rotation,
 }: {
-  label: string;
   position: [number, number, number];
   rotation?: [number, number, number];
 }) {
@@ -385,9 +379,12 @@ function RevenueSignFace({
 
     context.textAlign = "center";
     context.textBaseline = "middle";
+    context.fillStyle = "#54766b";
+    context.font = '750 56px "Inter", Arial, sans-serif';
+    context.fillText("WELCOME TO", canvas.width / 2, 143, canvas.width * 0.84);
     context.fillStyle = "#0b654a";
-    context.font = '900 156px "Inter", Arial, sans-serif';
-    context.fillText(label, canvas.width / 2, canvas.height / 2 + 4, canvas.width * 0.88);
+    context.font = '900 108px "Inter", Arial, sans-serif';
+    context.fillText("BRUME WORLD", canvas.width / 2, 270, canvas.width * 0.88);
 
     const nextTexture = new THREE.CanvasTexture(canvas);
     nextTexture.colorSpace = THREE.SRGBColorSpace;
@@ -395,7 +392,7 @@ function RevenueSignFace({
     nextTexture.magFilter = THREE.LinearFilter;
     nextTexture.needsUpdate = true;
     return nextTexture;
-  }, [label]);
+  }, []);
 
   useEffect(() => () => texture?.dispose(), [texture]);
 
@@ -409,7 +406,7 @@ function RevenueSignFace({
   );
 }
 
-function RevenueHelicopter({ totalRevenue }: { totalRevenue: number }) {
+function WelcomeHelicopter() {
   const helicopterRef = useRef<THREE.Group>(null);
   const craftRef = useRef<THREE.Group>(null);
   const rotorRef = useRef<THREE.Group>(null);
@@ -419,8 +416,6 @@ function RevenueHelicopter({ totalRevenue }: { totalRevenue: number }) {
   const screenAnchor = useMemo(() => new THREE.Vector3(), []);
   const cameraDirection = useMemo(() => new THREE.Vector3(), []);
   const cameraUp = useMemo(() => new THREE.Vector3(), []);
-  const revenueLabel = `Made $${revenueFormatter.format(totalRevenue)} till now`;
-
   useFrame(({ clock }) => {
     const elapsedTime = clock.getElapsedTime();
     const isCompactViewport = size.width < 640;
@@ -567,9 +562,8 @@ function RevenueHelicopter({ totalRevenue }: { totalRevenue: number }) {
             <boxGeometry args={[0.1, 0.98, 0.12]} />
             <meshStandardMaterial color="#2e775b" roughness={0.74} />
           </mesh>
-          <RevenueSignFace label={revenueLabel} position={[0, -0.01, 0.19]} />
-          <RevenueSignFace
-            label={revenueLabel}
+          <WelcomeSignFace position={[0, -0.01, 0.19]} />
+          <WelcomeSignFace
             position={[0, -0.01, -0.19]}
             rotation={[0, Math.PI, 0]}
           />
@@ -678,12 +672,10 @@ function AddedWorldBuilding({
 
 function FloatingIsland({
   addedBuildings = [],
-  totalRevenue,
   onHoverBuilding,
   onVisitBuilding,
 }: {
   addedBuildings?: AddedBuilding[];
-  totalRevenue: number;
   onHoverBuilding: (building: BuildingHoverCardData | null) => void;
   onVisitBuilding: (buildingId: string) => void;
 }) {
@@ -694,7 +686,7 @@ function FloatingIsland({
       <RandomTrees />
       <EdgeDecorations />
       <WorldDetails />
-      <RevenueHelicopter totalRevenue={totalRevenue} />
+      <WelcomeHelicopter />
       {addedBuildings.map((building) => (
         <AddedWorldBuilding
           key={building.id}
@@ -757,7 +749,6 @@ function mergeBuildingIntoList(
 const BUILDINGS_SYNC_INTERVAL_MS = 10000;
 const CHECKOUT_FOCUS_POLL_INTERVAL_MS = 2000;
 const CHECKOUT_FOCUS_MAX_POLLS = 30;
-const revenueFormatter = new Intl.NumberFormat("en-US");
 
 function formatRecentBuildingTime(createdAt: string) {
   const createdTime = new Date(createdAt).getTime();
@@ -874,10 +865,8 @@ function isRevenueExcludedBuilding(building: AddedBuilding) {
 }
 
 export function SceneCanvas({
-  paymentsEnabled,
   walletAddress,
 }: {
-  paymentsEnabled: boolean;
   walletAddress: string;
 }) {
   const multiplayer = useMultiplayer({
@@ -893,7 +882,6 @@ export function SceneCanvas({
   const [selectedPlayer, setSelectedPlayer] = useState<NetworkPlayer | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
   const [loadError, setLoadError] = useState("");
-  const [addBuildingPanelOpen, setAddBuildingPanelOpen] = useState(false);
   const [avatarCustomizerOpen, setAvatarCustomizerOpen] = useState(false);
   const [transferRecipient, setTransferRecipient] = useState<NetworkPlayer | null>(null);
   const buildingsSyncInFlightRef = useRef(false);
@@ -1014,7 +1002,6 @@ export function SceneCanvas({
   }, []);
   const playerInputRef = useWorldKeyboard({
     enabled:
-      !addBuildingPanelOpen &&
       !avatarCustomizerOpen &&
       !transferRecipient &&
       !selectedInteraction &&
@@ -1023,14 +1010,6 @@ export function SceneCanvas({
     onInteract: handleInteract,
     onEscape: handleEscape,
   });
-  const totalRevenue = useMemo(
-    () =>
-      addedBuildings.filter((building) => !isRevenueExcludedBuilding(building)).reduce(
-        (total, building) => total + Number(building.price || 0),
-        0,
-      ),
-    [addedBuildings],
-  );
   const syncBuildings = useCallback(async ({ quiet = false } = {}) => {
     if (buildingsSyncInFlightRef.current) return null;
     if (document.visibilityState !== "visible") return null;
@@ -1185,34 +1164,6 @@ export function SceneCanvas({
     };
   }, [syncBuildings]);
 
-  const handleAddBuilding = async (data: BuildingPreviewData) => {
-    if (!paymentsEnabled) {
-      throw new Error("Payments are currently disabled.");
-    }
-
-    const response = await fetch("/api/buildings/checkout", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        buildingType: data.buildingType,
-        companyName: data.companyName,
-        domain: data.domain,
-      }),
-    });
-    const payload = (await response.json()) as {
-      checkoutUrl?: string;
-      error?: string;
-      errors?: Record<string, string>;
-    };
-
-    if (!response.ok || !payload.checkoutUrl) {
-      const fieldError = payload.errors ? Object.values(payload.errors)[0] : null;
-      throw new Error(fieldError ?? payload.error ?? "Could not start checkout.");
-    }
-
-    window.location.assign(payload.checkoutUrl);
-  };
-
   const handleFocusBuilding = useCallback((building: AddedBuilding) => {
     setFocusRequest(getAddedBuildingFocusRequest(building));
   }, []);
@@ -1224,7 +1175,6 @@ export function SceneCanvas({
   const openAvatarCustomizer = useCallback(() => {
     setSelectedInteraction(null);
     setSelectedPlayer(null);
-    setAddBuildingPanelOpen(false);
     setAvatarCustomizerOpen(true);
     setTransferRecipient(null);
   }, []);
@@ -1321,7 +1271,6 @@ export function SceneCanvas({
         />
         <FloatingIsland
           addedBuildings={addedBuildings}
-          totalRevenue={totalRevenue}
           onHoverBuilding={setHoveredBuilding}
           onVisitBuilding={handleVisitBuilding}
         />
@@ -1389,9 +1338,6 @@ export function SceneCanvas({
         onlineNow={multiplayer.onlineCount}
         connectionState={multiplayer.connectionState}
       />
-      <p className="sr-only" aria-live="polite">
-        Made ${revenueFormatter.format(totalRevenue)} till now
-      </p>
       <RecentBuildingsPanel
         buildings={addedBuildings}
         onFocusBuilding={handleFocusBuilding}
@@ -1400,14 +1346,14 @@ export function SceneCanvas({
       <ControlsTutorial />
       <InteractionPrompt
         interaction={
-          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen || avatarCustomizerOpen || transferRecipient || activeEncounter || nearbyPlayer
+          selectedInteraction || activeSelectedPlayer || avatarCustomizerOpen || transferRecipient || activeEncounter || nearbyPlayer
             ? null
             : nearbyInteraction
         }
       />
       <PlayerInteractionPrompt
         player={
-          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen || avatarCustomizerOpen || transferRecipient || activeEncounter
+          selectedInteraction || activeSelectedPlayer || avatarCustomizerOpen || transferRecipient || activeEncounter
             ? null
             : nearbyPlayer
         }
@@ -1471,19 +1417,6 @@ export function SceneCanvas({
           }}
         />
       )}
-      <AddBuildingPanel
-        onAddBuilding={handleAddBuilding}
-        open={addBuildingPanelOpen}
-        onOpenChange={(open) => {
-          if (open) {
-            setSelectedInteraction(null);
-            setSelectedPlayer(null);
-            setAvatarCustomizerOpen(false);
-          }
-          setAddBuildingPanelOpen(open);
-        }}
-        paymentsEnabled={paymentsEnabled}
-      />
       {loadError && (
         <div className="building-load-error" role="alert">
           <span>{loadError}</span>
