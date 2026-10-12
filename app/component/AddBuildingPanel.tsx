@@ -198,6 +198,7 @@ function WebsiteDetailsForm({
   onBack,
   onSubmit,
   saving,
+  paymentsEnabled,
 }: {
   form: WebsiteFormState;
   errors: WebsiteFormErrors;
@@ -206,6 +207,7 @@ function WebsiteDetailsForm({
   onBack: () => void;
   onSubmit: () => void;
   saving: boolean;
+  paymentsEnabled: boolean;
 }) {
   return (
     <div className="building-panel-view">
@@ -248,6 +250,12 @@ function WebsiteDetailsForm({
         domain={normalizeDomain(form.domain)}
       />
 
+      {!paymentsEnabled && (
+        <p className="building-payment-disabled" role="status">
+          Payments are paused right now. New building purchases are unavailable.
+        </p>
+      )}
+
       <div className="building-panel-actions">
         <button
           className="building-secondary-action"
@@ -258,13 +266,19 @@ function WebsiteDetailsForm({
           Back
         </button>
         <button
-          className="building-primary-action"
+          className={`building-primary-action${
+            paymentsEnabled ? "" : " is-unavailable"
+          }`}
           type="button"
           onClick={onSubmit}
-          disabled={saving}
+          disabled={saving || !paymentsEnabled}
           aria-busy={saving}
         >
-          {saving ? "Opening checkout..." : "Continue to payment"}
+          {saving
+            ? "Opening checkout..."
+            : paymentsEnabled
+              ? "Continue to payment"
+              : "Payments unavailable"}
         </button>
       </div>
     </div>
@@ -275,10 +289,12 @@ export function AddBuildingPanel({
   onAddBuilding,
   open,
   onOpenChange,
+  paymentsEnabled,
 }: {
   onAddBuilding: (data: BuildingPreviewData) => Promise<void>;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  paymentsEnabled: boolean;
 }) {
   const [step, setStep] = useState<Step>("choose");
   const [selectedBuilding, setSelectedBuilding] = useState<BuildingType | null>(null);
@@ -410,7 +426,7 @@ export function AddBuildingPanel({
               <div className="building-panel-view">
                 <div className="building-panel-copy">
                   <h2>Choose your building</h2>
-                  <p>Select a building type to promote your website on the island.</p>
+                  <p>Select a building type to promote your website in BRUME World.</p>
                 </div>
 
                 <div className="building-type-list">
@@ -444,6 +460,7 @@ export function AddBuildingPanel({
                 }}
                 onSubmit={handleAddBuilding}
                 saving={saving}
+                paymentsEnabled={paymentsEnabled}
               />
             )}
 

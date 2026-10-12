@@ -1,8 +1,8 @@
 import { Redis } from "@upstash/redis";
 import type { SavedBuilding } from "@/lib/buildings";
 
-const BUILDINGS_CACHE_KEY = "wake:buildings:active:v2";
-const BUILDINGS_CACHE_VERSION_KEY = "wake:buildings:version:v2";
+const BUILDINGS_CACHE_KEY = "brume-world:buildings:active:v2";
+const BUILDINGS_CACHE_VERSION_KEY = "brume-world:buildings:version:v2";
 const BUILDINGS_CACHE_TTL_SECONDS = 60;
 
 const redis =

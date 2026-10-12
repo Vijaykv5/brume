@@ -3,7 +3,7 @@
   "configVersion": 1,
   "workspaces": {
     "": {
-      "name": "my-bun-app",
+      "name": "brume-world",
       "dependencies": {
         "@neondatabase/serverless": "^1.1.0",
         "@react-three/drei": "^10.7.8",

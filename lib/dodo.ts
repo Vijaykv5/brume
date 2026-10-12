@@ -1,4 +1,5 @@
 import { Webhook } from "standardwebhooks";
+import { assertDodoPaymentsEnabled } from "@/lib/payment-config";
 
 type DodoCheckoutResponse = {
   checkout_url?: string;
@@ -59,6 +60,7 @@ export async function createDodoCheckout({
   returnUrl: string;
   cancelUrl: string;
 }) {
+  assertDodoPaymentsEnabled();
   const apiKey = getRequiredEnv("DODO_API_KEY");
   const productId = getRequiredEnv("DODO_PRODUCT_ID");
   const response = await fetch(`${getDodoBaseUrl()}/checkouts`, {
@@ -134,6 +136,7 @@ export async function createDodoCheckout({
 }
 
 export function verifyDodoWebhook(payload: string, headers: Headers) {
+  assertDodoPaymentsEnabled();
   const webhook = new Webhook(getDodoWebhookSecret());
   const event = webhook.verify(payload, {
     "webhook-id": headers.get("webhook-id") ?? "",

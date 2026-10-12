@@ -9,8 +9,8 @@ type AnalyticsSummary = {
 };
 
 const REFRESH_INTERVAL_MS = 30000;
-const VISITOR_ID_STORAGE_KEY = "buildyourcity:visitor-id";
-const VIEW_TRACKED_STORAGE_KEY = "buildyourcity:view-tracked";
+const VISITOR_ID_STORAGE_KEY = "brume-world:visitor-id";
+const VIEW_TRACKED_STORAGE_KEY = "brume-world:view-tracked";
 
 function createVisitorId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) {

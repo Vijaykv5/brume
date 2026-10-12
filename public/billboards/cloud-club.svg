@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="640" viewBox="0 0 1400 640" role="img" aria-labelledby="title desc">
+  <title id="title">Cloud Club</title>
+  <desc id="desc">A playful floating clubhouse among rounded clouds.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#8ad7f2"/>
+      <stop offset="1" stop-color="#d5f3ff"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="640" rx="36" fill="url(#sky)"/>
+  <g fill="#fff" opacity=".92">
+    <ellipse cx="1030" cy="430" rx="188" ry="78"/>
+    <circle cx="958" cy="382" r="86"/>
+    <circle cx="1080" cy="354" r="116"/>
+    <circle cx="1192" cy="402" r="82"/>
+  </g>
+  <path d="M1010 342h204v128h-204z" fill="#335c70"/>
+  <path d="M986 342l126-102 126 102z" fill="#ef7b69"/>
+  <rect x="1082" y="376" width="62" height="94" rx="12" fill="#ffe89a"/>
+  <circle cx="1130" cy="419" r="7" fill="#335c70"/>
+  <text x="86" y="270" fill="#173b52" font-family="Inter,Arial,sans-serif" font-size="102" font-weight="900">CLOUD</text>
+  <text x="86" y="376" fill="#173b52" font-family="Inter,Arial,sans-serif" font-size="102" font-weight="900">CLUB</text>
+  <text x="92" y="462" fill="#2e637c" font-family="Inter,Arial,sans-serif" font-size="38" font-weight="700">A SOCIAL SPACE ABOVE THE NOISE</text>
+</svg>

@@ -1,11 +1,10 @@
 "use client";
 
-import { ContactShadows, OrbitControls } from "@react-three/drei";
+import { ContactShadows } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { ComponentRef } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
-import type { BuildingType, SavedBuilding } from "@/lib/buildings";
+import { getBuildingFootprintSize, type BuildingType, type SavedBuilding } from "@/lib/buildings";
 import { getWebsiteFaviconUrl } from "@/lib/favicon";
 import {
   SmallOfficeBuilding,
@@ -27,171 +26,38 @@ import {
   type BuildingHoverCardData,
 } from "./component/BuildingHoverCard";
 import { SkyBirds } from "./component/SkyBirds";
+import { PlayerController } from "./world/PlayerController";
+import {
+  ThirdPersonCamera,
+  type CameraFocusRequest,
+} from "./world/ThirdPersonCamera";
+import type {
+  PlayerMotionState,
+  WorldCollider,
+  WorldInteraction,
+} from "./world/types";
+import { useWorldKeyboard } from "./world/useWorldKeyboard";
+import { WorldBillboards } from "./world/WorldBillboard";
+import {
+  ControlsTutorial,
+  InteractionPanel,
+  InteractionPrompt,
+  WorldLoading,
+} from "./world/WorldHud";
+import {
+  EDGE_ROCK_PLACEMENTS,
+  EXAMPLE_BILLBOARDS,
+  PLAYER_SPAWN,
+  ROCK_PLACEMENTS,
+  STATIC_WORLD_COLLIDERS,
+  TREE_PLACEMENTS,
+  TRUNK_PLACEMENTS,
+} from "./world/world-data";
 
-const CAMERA_ELEVATION = THREE.MathUtils.degToRad(10);
-const CAMERA_AZIMUTH = THREE.MathUtils.degToRad(2);
-const CAMERA_VIEW_DIRECTION = new THREE.Vector3(
-  Math.sin(CAMERA_AZIMUTH) * Math.cos(CAMERA_ELEVATION),
-  Math.sin(CAMERA_ELEVATION),
-  Math.cos(CAMERA_AZIMUTH) * Math.cos(CAMERA_ELEVATION),
-).normalize();
-const CITY_FRAMING_BOUNDS = new THREE.Box3(
-  new THREE.Vector3(-24, -0.55, -18),
-  new THREE.Vector3(26, 0.55, 18),
-);
 const REVENUE_EXCLUDED_BUILDING_ID = "2b68275d-5db0-40dc-8448-4630323f610e";
 const REVENUE_EXCLUDED_BUILDING_ORDER_ID = "17004efa-03a7-455e-af61-631c735efb62";
-type TreePlacement = {
-  position: [number, number, number];
-  scale: number;
-  rotation: number;
-  leaf: string;
-  leafAccent: string;
-};
 
 type AddedBuilding = SavedBuilding;
-
-type CameraFocusRequest = {
-  id: string;
-  target: [number, number, number];
-  distance: number;
-};
-
-const TREE_PLACEMENTS: TreePlacement[] = [
-  {
-    position: [-24, 0.46, -18],
-    scale: 1.36,
-    rotation: -0.4,
-    leaf: "#86bf61",
-    leafAccent: "#c9e8a5",
-  },
-  {
-    position: [-17, 0.46, 16],
-    scale: 0.96,
-    rotation: 0.65,
-    leaf: "#5f9e48",
-    leafAccent: "#b9df8d",
-  },
-  {
-    position: [12, 0.46, -20],
-    scale: 1.16,
-    rotation: -0.55,
-    leaf: "#72ad50",
-    leafAccent: "#d2efad",
-  },
-  {
-    position: [24, 0.46, 15],
-    scale: 1.48,
-    rotation: -0.85,
-    leaf: "#6faf4d",
-    leafAccent: "#d8f0b4",
-  },
-  {
-    position: [34, 0.46, -8],
-    scale: 0.88,
-    rotation: 0.35,
-    leaf: "#5f9b46",
-    leafAccent: "#bae18d",
-  },
-  {
-    position: [-35, 0.46, 4],
-    scale: 1.08,
-    rotation: -0.35,
-    leaf: "#6cae4e",
-    leafAccent: "#d6f1af",
-  },
-  {
-    position: [-47, 0.46, -24],
-    scale: 0.92,
-    rotation: 0.45,
-    leaf: "#76b456",
-    leafAccent: "#c8eaa1",
-  },
-  {
-    position: [-42, 0.46, 27],
-    scale: 1.24,
-    rotation: -0.95,
-    leaf: "#5f9e48",
-    leafAccent: "#c1e596",
-  },
-  {
-    position: [-8, 0.46, 35],
-    scale: 0.86,
-    rotation: 0.2,
-    leaf: "#82bd5f",
-    leafAccent: "#d4efb0",
-  },
-  {
-    position: [18, 0.46, 36],
-    scale: 1.14,
-    rotation: 1.05,
-    leaf: "#6daa4e",
-    leafAccent: "#cdeba5",
-  },
-  {
-    position: [43, 0.46, 24],
-    scale: 0.98,
-    rotation: -0.25,
-    leaf: "#7eb95d",
-    leafAccent: "#d7f1b6",
-  },
-  {
-    position: [49, 0.46, -22],
-    scale: 1.32,
-    rotation: 0.72,
-    leaf: "#679f4a",
-    leafAccent: "#c5e89b",
-  },
-  {
-    position: [6, 0.46, -38],
-    scale: 0.8,
-    rotation: -0.7,
-    leaf: "#8ac466",
-    leafAccent: "#dcf3bb",
-  },
-  {
-    position: [-58, 0.46, 6],
-    scale: 1.42,
-    rotation: 0.38,
-    leaf: "#6ea94f",
-    leafAccent: "#c9eaa2",
-  },
-  {
-    position: [64, 0.46, 4],
-    scale: 1.08,
-    rotation: -1.15,
-    leaf: "#7fba5e",
-    leafAccent: "#d5efb1",
-  },
-  {
-    position: [-54, 0.46, -42],
-    scale: 1.18,
-    rotation: 0.88,
-    leaf: "#5f9c46",
-    leafAccent: "#bde28f",
-  },
-  {
-    position: [50, 0.46, 45],
-    scale: 1.34,
-    rotation: -0.42,
-    leaf: "#74b455",
-    leafAccent: "#d8f2b4",
-  },
-  {
-    position: [-12, 0.46, 62],
-    scale: 0.98,
-    rotation: 1.24,
-    leaf: "#88c265",
-    leafAccent: "#ddf3be",
-  },
-  {
-    position: [30, 0.46, -56],
-    scale: 1.52,
-    rotation: -0.96,
-    leaf: "#689f4b",
-    leafAccent: "#c6e79c",
-  },
-];
 
 function WorldPlot() {
   return (
@@ -449,30 +315,13 @@ function WorldDetails() {
       <SoilPatch position={[16, 0.02, -14]} scale={[2.1, 1.1]} rotation={0.3} />
       <SoilPatch position={[-20, 0.02, 8]} scale={[1.6, 0.9]} rotation={-0.45} />
 
-      <Rock position={[16, 0.12, -13]} scale={0.5} />
-      <Rock position={[18.2, 0.1, -15]} scale={0.32} />
-      <Rock position={[-21, 0.1, 9.2]} scale={0.42} />
-      <Rock position={[20.5, 0.11, 11.8]} scale={0.58} />
-      <Rock position={[-15.5, 0.1, 16]} scale={0.34} />
-      <Rock position={[27, 0.1, 8.8]} scale={0.46} />
-      <Rock position={[-45, 0.1, -18]} scale={0.5} />
-      <Rock position={[-38, 0.09, 30]} scale={0.34} />
-      <Rock position={[-4, 0.1, 39]} scale={0.42} />
-      <Rock position={[25, 0.09, 34]} scale={0.3} />
-      <Rock position={[46, 0.12, 19]} scale={0.62} />
-      <Rock position={[53, 0.09, -26]} scale={0.36} />
-      <Rock position={[10, 0.1, -42]} scale={0.44} />
-      <Rock position={[-30, 0.1, -34]} scale={0.28} />
+      {ROCK_PLACEMENTS.map((rock, index) => (
+        <Rock key={`world-rock-${index}`} {...rock} />
+      ))}
 
-      <FallenTrunk position={[18, 0.22, -5]} rotation={0.55} scale={1.1} />
-      <FallenTrunk position={[-19, 0.2, -10]} rotation={-0.8} scale={0.85} />
-      <FallenTrunk position={[27, 0.2, 8]} rotation={1.1} scale={0.9} />
-      <FallenTrunk position={[-27, 0.2, 4]} rotation={-0.2} scale={1.05} />
-      <FallenTrunk position={[-44, 0.2, 22]} rotation={0.4} scale={0.92} />
-      <FallenTrunk position={[-24, 0.2, -31]} rotation={-1.15} scale={0.78} />
-      <FallenTrunk position={[34, 0.2, 30]} rotation={0.95} scale={0.88} />
-      <FallenTrunk position={[48, 0.2, -18]} rotation={-0.55} scale={1.0} />
-      <FallenTrunk position={[4, 0.2, 42]} rotation={1.35} scale={0.72} />
+      {TRUNK_PLACEMENTS.map((trunk, index) => (
+        <FallenTrunk key={`world-trunk-${index}`} {...trunk} />
+      ))}
 
       <Mushroom position={[14, 0, -6]} color="#c75b46" scale={1.1} />
       <Mushroom position={[15, 0, -5.2]} color="#d8944e" scale={0.8} />
@@ -728,10 +577,13 @@ function EdgeDecorations() {
       <GrassTuft position={[9.6, 0, -0.7]} />
       <GrassTuft position={[7.4, 0, 3.7]} />
 
-      <Rock position={[-7.9, 0.12, 2.2]} scale={0.75} />
-      <Rock position={[-3.4, 0.1, -5.2]} scale={0.56} />
-      <Rock position={[3.6, 0.1, 5.4]} scale={0.64} />
-      <Rock position={[8.1, 0.1, 1.4]} scale={0.52} />
+      {EDGE_ROCK_PLACEMENTS.map((rock, index) => (
+        <Rock
+          key={`edge-rock-${index}`}
+          position={[rock.position[0], rock.position[1] - 0.46, rock.position[2]]}
+          scale={rock.scale}
+        />
+      ))}
     </group>
   );
 }
@@ -843,20 +695,6 @@ function FloatingIsland({
   );
 }
 
-function getBoundsCorners(bounds: THREE.Box3) {
-  const { min, max } = bounds;
-
-  return [min.x, max.x].flatMap((x) =>
-    [min.y, max.y].flatMap((y) =>
-      [min.z, max.z].map((z) => new THREE.Vector3(x, y, z)),
-    ),
-  );
-}
-
-function getVisibleScenePoints() {
-  return getBoundsCorners(CITY_FRAMING_BOUNDS);
-}
-
 function getAddedBuildingBounds(building: AddedBuilding) {
   const [x, y, z] = building.position;
   const dimensions: Record<
@@ -904,301 +742,10 @@ function mergeBuildingIntoList(
     : [...buildings, building];
 }
 
-function getDynamicVisibleScenePoints(
-  right: THREE.Vector3,
-  cameraUp: THREE.Vector3,
-  addedBuildings: AddedBuilding[],
-) {
-  return addedBuildings.flatMap((building) =>
-    getBoundsCorners(getAddedBuildingBounds(building)),
-  );
-}
-
-function getProjectedBoundsCenter(
-  points: THREE.Vector3[],
-  right: THREE.Vector3,
-  cameraUp: THREE.Vector3,
-) {
-  const axes = [right, cameraUp, CAMERA_VIEW_DIRECTION];
-  const midpoints = axes.map((axis) => {
-    const values = points.map((point) => point.dot(axis));
-    return (Math.min(...values) + Math.max(...values)) / 2;
-  });
-
-  return right
-    .clone()
-    .multiplyScalar(midpoints[0])
-    .addScaledVector(cameraUp, midpoints[1])
-    .addScaledVector(CAMERA_VIEW_DIRECTION, midpoints[2]);
-}
-
-function getWorldXZBounds(points: THREE.Vector3[]) {
-  const xValues = points.map((point) => point.x);
-  const zValues = points.map((point) => point.z);
-
-  return {
-    minX: Math.min(...xValues),
-    maxX: Math.max(...xValues),
-    minZ: Math.min(...zValues),
-    maxZ: Math.max(...zValues),
-  };
-}
-
-function getCameraFraming(aspect: number, addedBuildings: AddedBuilding[]) {
-  const isMobile = aspect < 0.75;
-  const isTablet = aspect >= 0.75 && aspect < 1.35;
-  const horizontalLimit = isMobile ? 0.9 : isTablet ? 0.84 : 0.79;
-  const verticalTopLimit = isMobile ? 0.64 : isTablet ? 0.57 : 0.52;
-  const verticalBottomLimit = isMobile ? -0.9 : isTablet ? -0.88 : -0.86;
-  const fov = isMobile ? 40 : isTablet ? 37 : 34;
-  const fitVerticalBias = isMobile ? 0.1 : 0.14;
-  const compositionVerticalBias = isMobile ? 0.28 : isTablet ? 0.18 : 0.24;
-  const tangent = Math.tan(THREE.MathUtils.degToRad(fov / 2));
-  const forward = CAMERA_VIEW_DIRECTION.clone().negate();
-  const right = new THREE.Vector3().crossVectors(forward, THREE.Object3D.DEFAULT_UP).normalize();
-  const cameraUp = new THREE.Vector3().crossVectors(right, forward).normalize();
-  const visiblePoints = [
-    ...getVisibleScenePoints(),
-    ...getDynamicVisibleScenePoints(right, cameraUp, addedBuildings),
-  ];
-  const center = getProjectedBoundsCenter(visiblePoints, right, cameraUp);
-  const worldBounds = getWorldXZBounds(visiblePoints);
-
-  const fitsAtDistance = (distance: number) => {
-    const targetOffset = fitVerticalBias * distance * tangent;
-    const target = center.clone().addScaledVector(cameraUp, targetOffset);
-
-    return visiblePoints.every((point) => {
-      const relative = point.clone().sub(target);
-      const depth = distance - relative.dot(CAMERA_VIEW_DIRECTION);
-      if (depth <= 0) return false;
-
-      const normalizedX = relative.dot(right) / (depth * tangent * aspect);
-      const normalizedY = relative.dot(cameraUp) / (depth * tangent);
-
-      return (
-        Math.abs(normalizedX) <= horizontalLimit &&
-        normalizedY <= verticalTopLimit &&
-        normalizedY >= verticalBottomLimit
-      );
-    });
-  };
-
-  let nearDistance = 6;
-  let farDistance = 140;
-  for (let iteration = 0; iteration < 48; iteration += 1) {
-    const middleDistance = (nearDistance + farDistance) / 2;
-    if (fitsAtDistance(middleDistance)) {
-      farDistance = middleDistance;
-    } else {
-      nearDistance = middleDistance;
-    }
-  }
-
-  const closeFitScale = isMobile
-    ? 0.96
-    : isTablet
-      ? 0.9
-      : aspect < 1.7
-        ? 0.9
-        : 0.86;
-  const distance = farDistance * closeFitScale;
-  const target = center
-    .clone()
-    .addScaledVector(cameraUp, compositionVerticalBias * distance * tangent);
-  const position = target
-    .clone()
-    .addScaledVector(CAMERA_VIEW_DIRECTION, distance);
-
-  return {
-    fov,
-    distance,
-    position: position.toArray() as [number, number, number],
-    target: target.toArray() as [number, number, number],
-    minTargetY: target.y - 0.7,
-    maxTargetY: target.y + 0.7,
-    minTargetX: worldBounds.minX - (isMobile ? 2 : 4),
-    maxTargetX: worldBounds.maxX + (isMobile ? 2 : 4),
-    minTargetZ: worldBounds.minZ - (isMobile ? 2 : 4),
-    maxTargetZ: worldBounds.maxZ + (isMobile ? 2 : 4),
-    minDistance: Math.max(7, distance * (isMobile ? 0.44 : 0.38)),
-    maxDistance: Math.min(
-      distance * (isMobile ? 0.82 : isTablet ? 0.96 : 1.18),
-      isMobile ? 46 : isTablet ? 62 : 82,
-    ),
-  };
-}
-
-function CameraRig({
-  focusRequest,
-  addedBuildings,
-}: {
-  focusRequest: CameraFocusRequest | null;
-  addedBuildings: AddedBuilding[];
-}) {
-  const { set, size } = useThree();
-  const aspect = size.width / Math.max(size.height, 1);
-  const framing = useMemo(
-    () => getCameraFraming(aspect, addedBuildings),
-    [addedBuildings, aspect],
-  );
-  const controlsRef = useRef<ComponentRef<typeof OrbitControls>>(null);
-  const defaultTarget = useMemo(
-    () => new THREE.Vector3(...framing.target),
-    [framing.target],
-  );
-  const fittedCamera = useMemo(() => {
-    const nextCamera = new THREE.PerspectiveCamera(
-      framing.fov,
-      aspect,
-      0.1,
-      140,
-    );
-    nextCamera.position.fromArray(framing.position);
-    nextCamera.lookAt(defaultTarget);
-    nextCamera.updateProjectionMatrix();
-    nextCamera.updateMatrixWorld();
-    return nextCamera;
-  }, [aspect, defaultTarget, framing.fov, framing.position]);
-  const correctingMovement = useRef(false);
-  const constrainMovement = useCallback(() => {
-    const controls = controlsRef.current;
-    if (!controls || correctingMovement.current) return;
-
-    const constrainedX = THREE.MathUtils.clamp(
-      controls.target.x,
-      framing.minTargetX,
-      framing.maxTargetX,
-    );
-    const constrainedY = THREE.MathUtils.clamp(
-      controls.target.y,
-      framing.minTargetY,
-      framing.maxTargetY,
-    );
-    const constrainedZ = THREE.MathUtils.clamp(
-      controls.target.z,
-      framing.minTargetZ,
-      framing.maxTargetZ,
-    );
-    const correction = new THREE.Vector3(
-      controls.target.x - constrainedX,
-      controls.target.y - constrainedY,
-      controls.target.z - constrainedZ,
-    );
-    const target = new THREE.Vector3(constrainedX, constrainedY, constrainedZ);
-    const targetToCamera = controls.object.position.clone().sub(target);
-    const cameraDistance = targetToCamera.length();
-    const constrainedDistance = THREE.MathUtils.clamp(
-      cameraDistance,
-      framing.minDistance,
-      framing.maxDistance,
-    );
-    const needsDistanceCorrection = Math.abs(cameraDistance - constrainedDistance) > 0.001;
-
-    if (correction.lengthSq() < 0.000001 && !needsDistanceCorrection) return;
-
-    correctingMovement.current = true;
-    controls.object.position.sub(correction);
-    if (needsDistanceCorrection) {
-      targetToCamera.setLength(constrainedDistance);
-      controls.object.position.copy(target.clone().add(targetToCamera));
-    }
-    controls.target.copy(target);
-    controls.object.lookAt(controls.target);
-    correctingMovement.current = false;
-  }, [
-    framing.maxDistance,
-    framing.maxTargetX,
-    framing.maxTargetY,
-    framing.maxTargetZ,
-    framing.minDistance,
-    framing.minTargetX,
-    framing.minTargetY,
-    framing.minTargetZ,
-  ]);
-
-  useLayoutEffect(() => {
-    set({ camera: fittedCamera });
-
-    const controls = controlsRef.current;
-    if (controls) {
-      controls.target.copy(defaultTarget);
-      controls.update();
-    }
-  }, [defaultTarget, fittedCamera, set]);
-
-  useLayoutEffect(() => {
-    if (!focusRequest) return;
-
-    const controls = controlsRef.current;
-    const focusTarget = new THREE.Vector3(...focusRequest.target);
-    const focusPosition = focusTarget
-      .clone()
-      .addScaledVector(CAMERA_VIEW_DIRECTION, focusRequest.distance);
-
-    fittedCamera.position.copy(focusPosition);
-    fittedCamera.lookAt(focusTarget);
-    fittedCamera.updateProjectionMatrix();
-    fittedCamera.updateMatrixWorld();
-
-    if (controls) {
-      controls.target.copy(focusTarget);
-      controls.object.position.copy(focusPosition);
-      controls.object.lookAt(focusTarget);
-      controls.update();
-    }
-  }, [fittedCamera, focusRequest]);
-
-  return (
-    <OrbitControls
-      ref={controlsRef}
-      camera={fittedCamera}
-      enableDamping={false}
-      enablePan
-      enableRotate
-      enableZoom
-      zoomToCursor
-      minDistance={framing.minDistance}
-      maxDistance={framing.maxDistance}
-      minPolarAngle={0.48}
-      maxPolarAngle={Math.PI / 2.35}
-      screenSpacePanning
-      mouseButtons={{
-        LEFT: THREE.MOUSE.ROTATE,
-        MIDDLE: THREE.MOUSE.PAN,
-        RIGHT: THREE.MOUSE.PAN,
-      }}
-      touches={{ ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_PAN }}
-      target={framing.target}
-      onChange={constrainMovement}
-    />
-  );
-}
-
-const INTRO_STORAGE_KEY = "buildyourcity:intro-seen";
 const BUILDINGS_SYNC_INTERVAL_MS = 10000;
 const CHECKOUT_FOCUS_POLL_INTERVAL_MS = 2000;
 const CHECKOUT_FOCUS_MAX_POLLS = 30;
 const revenueFormatter = new Intl.NumberFormat("en-US");
-
-function ProductIntroOverlay({
-  visible,
-}: {
-  visible: boolean;
-}) {
-  if (!visible) return null;
-
-  return (
-    <section className="product-intro" aria-label="Discover products">
-      <div className="product-intro-content">
-        <h1>
-          Discover products
-          <span>built to stand out</span>
-        </h1>
-      </div>
-    </section>
-  );
-}
 
 function formatRecentBuildingTime(createdAt: string) {
   const createdTime = new Date(createdAt).getTime();
@@ -1314,25 +861,76 @@ function isRevenueExcludedBuilding(building: AddedBuilding) {
   );
 }
 
-export function SceneCanvas() {
-  const [resetToken, setResetToken] = useState(0);
+export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
+  const [cameraResetToken, setCameraResetToken] = useState(0);
   const [addedBuildings, setAddedBuildings] = useState<AddedBuilding[]>([]);
-  const [cameraFramingBuildings, setCameraFramingBuildings] = useState<AddedBuilding[]>([]);
   const [hoveredBuilding, setHoveredBuilding] = useState<BuildingHoverCardData | null>(null);
   const [focusRequest, setFocusRequest] = useState<CameraFocusRequest | null>(null);
+  const [nearbyInteraction, setNearbyInteraction] = useState<WorldInteraction | null>(null);
+  const [selectedInteraction, setSelectedInteraction] = useState<WorldInteraction | null>(null);
+  const [sceneReady, setSceneReady] = useState(false);
   const [loadError, setLoadError] = useState("");
-  const [introVisible, setIntroVisible] = useState(() => {
-    if (typeof window === "undefined") return false;
-
-    try {
-      return window.localStorage.getItem(INTRO_STORAGE_KEY) !== "true";
-    } catch {
-      return true;
-    }
-  });
   const [addBuildingPanelOpen, setAddBuildingPanelOpen] = useState(false);
   const buildingsSyncInFlightRef = useRef(false);
-  const cameraFramingInitializedRef = useRef(false);
+  const playerMotionRef = useRef<PlayerMotionState>({
+    position: new THREE.Vector3(...PLAYER_SPAWN),
+    velocity: new THREE.Vector3(),
+    heading: Math.PI,
+    moving: false,
+    running: false,
+  });
+  const worldInteractions = useMemo<WorldInteraction[]>(
+    () => [
+      ...EXAMPLE_BILLBOARDS,
+      ...addedBuildings.map((building) => {
+        const footprint = getBuildingFootprintSize(building.buildingType);
+        const buildingLabel = building.buildingType
+          .split("-")
+          .map((word) => word.slice(0, 1).toUpperCase() + word.slice(1))
+          .join(" ");
+
+        return {
+          id: `building:${building.id}`,
+          kind: building.buildingType === "billboard" ? "billboard" : "building",
+          title: building.companyName,
+          subtitle: building.domain,
+          description: `${buildingLabel} for ${building.companyName} in BRUME World.`,
+          position: building.position,
+          range: Math.max(footprint.width, footprint.depth) / 2 + 2.4,
+          websiteUrl: `https://${building.domain}`,
+          imageUrl: building.logoUrl,
+          buildingId: building.id,
+        } satisfies WorldInteraction;
+      }),
+    ],
+    [addedBuildings],
+  );
+  const worldColliders = useMemo<WorldCollider[]>(
+    () => [
+      ...STATIC_WORLD_COLLIDERS,
+      ...addedBuildings.map((building) => {
+        const footprint = getBuildingFootprintSize(building.buildingType);
+        return {
+          id: `building:${building.id}`,
+          shape: "box" as const,
+          position: [building.position[0], building.position[2]] as [number, number],
+          halfSize: [footprint.width / 2, footprint.depth / 2] as [number, number],
+        };
+      }),
+    ],
+    [addedBuildings],
+  );
+  const handleInteract = useCallback(() => {
+    if (nearbyInteraction) setSelectedInteraction(nearbyInteraction);
+  }, [nearbyInteraction]);
+  const handleEscape = useCallback(() => {
+    setSelectedInteraction(null);
+  }, []);
+  const playerInputRef = useWorldKeyboard({
+    enabled: !addBuildingPanelOpen && !selectedInteraction,
+    onInteract: handleInteract,
+    onEscape: handleEscape,
+  });
   const totalRevenue = useMemo(
     () =>
       addedBuildings.filter((building) => !isRevenueExcludedBuilding(building)).reduce(
@@ -1341,25 +939,6 @@ export function SceneCanvas() {
       ),
     [addedBuildings],
   );
-  const completeIntro = useCallback(() => {
-    try {
-      window.localStorage.setItem(INTRO_STORAGE_KEY, "true");
-    } catch {
-      // Local storage can be unavailable in private or locked-down browsers.
-    }
-
-    setIntroVisible(false);
-    setFocusRequest(null);
-    setResetToken((token) => token + 1);
-  }, []);
-
-  useEffect(() => {
-    if (!introVisible) return;
-
-    const timeoutId = window.setTimeout(completeIntro, 3000);
-    return () => window.clearTimeout(timeoutId);
-  }, [completeIntro, introVisible]);
-
   const syncBuildings = useCallback(async ({ quiet = false } = {}) => {
     if (buildingsSyncInFlightRef.current) return null;
     if (document.visibilityState !== "visible") return null;
@@ -1383,10 +962,6 @@ export function SceneCanvas() {
       setAddedBuildings((currentBuildings) =>
         mergeBuildingsWithLocalCounts(currentBuildings, buildings),
       );
-      if (!cameraFramingInitializedRef.current) {
-        cameraFramingInitializedRef.current = true;
-        setCameraFramingBuildings(buildings);
-      }
       setLoadError("");
       return buildings;
     } catch (error) {
@@ -1471,11 +1046,7 @@ export function SceneCanvas() {
     let pollCount = 0;
 
     const focusPaidBuilding = (building: AddedBuilding) => {
-      setIntroVisible(false);
       setAddedBuildings((currentBuildings) =>
-        mergeBuildingIntoList(currentBuildings, building),
-      );
-      setCameraFramingBuildings((currentBuildings) =>
         mergeBuildingIntoList(currentBuildings, building),
       );
       setFocusRequest(getAddedBuildingFocusRequest(building));
@@ -1523,6 +1094,10 @@ export function SceneCanvas() {
   }, [syncBuildings]);
 
   const handleAddBuilding = async (data: BuildingPreviewData) => {
+    if (!paymentsEnabled) {
+      throw new Error("Payments are currently disabled.");
+    }
+
     const response = await fetch("/api/buildings/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1547,11 +1122,11 @@ export function SceneCanvas() {
   };
 
   const handleFocusBuilding = useCallback((building: AddedBuilding) => {
-    setIntroVisible(false);
-    setCameraFramingBuildings((currentBuildings) =>
-      mergeBuildingIntoList(currentBuildings, building),
-    );
     setFocusRequest(getAddedBuildingFocusRequest(building));
+  }, []);
+
+  const handlePlayerMovementStart = useCallback(() => {
+    setFocusRequest(null);
   }, []);
 
   const handleVisitBuilding = async (buildingId: string) => {
@@ -1608,13 +1183,20 @@ export function SceneCanvas() {
     <div className="scene-stage">
       <Canvas
         className="scene-canvas"
+        dpr={[1, 1.75]}
         shadows={{ type: THREE.PCFShadowMap }}
-        camera={{ fov: 36, near: 0.1, far: 140, position: [22, 24, 16] }}
+        camera={{ fov: 42, near: 0.1, far: 180, position: [8, 8.7, 18] }}
         gl={{ antialias: true, alpha: true }}
+        fallback={
+          <div className="world-webgl-fallback" role="alert">
+            This browser could not start the 3D world. Enable WebGL and try again.
+          </div>
+        }
         onCreated={({ gl }) => {
           gl.shadowMap.enabled = true;
           gl.shadowMap.type = THREE.PCFShadowMap;
           gl.setClearAlpha(0);
+          setSceneReady(true);
         }}
       >
         <fog attach="fog" args={["#bfe8ff", 85, 175]} />
@@ -1638,6 +1220,20 @@ export function SceneCanvas() {
           onHoverBuilding={setHoveredBuilding}
           onVisitBuilding={handleVisitBuilding}
         />
+        <Suspense fallback={null}>
+          <WorldBillboards
+            billboards={EXAMPLE_BILLBOARDS}
+            nearbyInteractionId={nearbyInteraction?.id ?? null}
+          />
+        </Suspense>
+        <PlayerController
+          inputRef={playerInputRef}
+          motionRef={playerMotionRef}
+          colliders={worldColliders}
+          interactions={worldInteractions}
+          onNearbyInteractionChange={setNearbyInteraction}
+          onMovementStart={handlePlayerMovementStart}
+        />
         <SkyBirds />
         <ContactShadows
           position={[0, -0.78, 0]}
@@ -1647,24 +1243,24 @@ export function SceneCanvas() {
           far={5}
           color="#7aa7bd"
         />
-        <CameraRig
-          key={resetToken}
+        <ThirdPersonCamera
+          playerMotionRef={playerMotionRef}
           focusRequest={focusRequest}
-          addedBuildings={cameraFramingBuildings}
+          resetToken={cameraResetToken}
         />
       </Canvas>
+      <WorldLoading visible={!sceneReady} />
       <button
         className="reset-camera-button"
         type="button"
         onClick={() => {
           setFocusRequest(null);
-          setResetToken((token) => token + 1);
+          setCameraResetToken((token) => token + 1);
         }}
       >
-        Reset view
+        Reset camera
       </button>
       <AnalyticsStatsPill />
-      <ProductIntroOverlay visible={introVisible} />
       <p className="sr-only" aria-live="polite">
         Made ${revenueFormatter.format(totalRevenue)} till now
       </p>
@@ -1673,14 +1269,36 @@ export function SceneCanvas() {
         onFocusBuilding={handleFocusBuilding}
       />
       <BuildingHoverCard building={hoveredBuilding} />
+      <ControlsTutorial />
+      <InteractionPrompt
+        interaction={
+          selectedInteraction || addBuildingPanelOpen ? null : nearbyInteraction
+        }
+      />
+      <InteractionPanel
+        interaction={selectedInteraction}
+        onClose={() => setSelectedInteraction(null)}
+        onVisit={() => {
+          if (selectedInteraction?.buildingId) {
+            void handleVisitBuilding(selectedInteraction.buildingId);
+          }
+        }}
+      />
       <AddBuildingPanel
         onAddBuilding={handleAddBuilding}
         open={addBuildingPanelOpen}
-        onOpenChange={setAddBuildingPanelOpen}
+        onOpenChange={(open) => {
+          if (open) setSelectedInteraction(null);
+          setAddBuildingPanelOpen(open);
+        }}
+        paymentsEnabled={paymentsEnabled}
       />
       {loadError && (
-        <div className="building-load-error" role="status">
-          {loadError}
+        <div className="building-load-error" role="alert">
+          <span>{loadError}</span>
+          <button type="button" onClick={() => void syncBuildings()}>
+            Retry
+          </button>
         </div>
       )}
     </div>

@@ -1,10 +1,10 @@
 import { Redis } from "@upstash/redis";
 import { ensureSiteAnalyticsTables, sql } from "@/lib/db";
 
-const SITE_VIEWS_KEY = "wake:analytics:views:v1";
-const SITE_ONLINE_KEY = "wake:analytics:online:v1";
+const SITE_VIEWS_KEY = "brume-world:analytics:views:v1";
+const SITE_ONLINE_KEY = "brume-world:analytics:online:v1";
 const ONLINE_WINDOW_SECONDS = 90;
-const VISITOR_HASH_PEPPER = "buildyourcity-site-analytics-v1";
+const VISITOR_HASH_PEPPER = "brume-world-site-analytics-v1";
 
 const redis =
   process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN

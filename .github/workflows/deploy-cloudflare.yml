@@ -40,10 +40,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DB_URL }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          DODO_API_KEY: ${{ secrets.DODO_API_KEY }}
-          DODO_ENVIRONMENT: ${{ secrets.DODO_ENVIRONMENT }}
-          DODO_PRODUCT_ID: ${{ secrets.DODO_PRODUCT_ID }}
-          DODO_WEBHOOK_SECRET: ${{ secrets.DODO_WEBHOOK_SECRET }}
+          DODO_PAYMENTS_ENABLED: ${{ vars.DODO_PAYMENTS_ENABLED || 'false' }}
 
       - name: Type check
         run: bunx tsc --noEmit --pretty false
@@ -55,10 +52,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DB_URL }}
           UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
           UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
-          DODO_API_KEY: ${{ secrets.DODO_API_KEY }}
-          DODO_ENVIRONMENT: ${{ secrets.DODO_ENVIRONMENT }}
-          DODO_PRODUCT_ID: ${{ secrets.DODO_PRODUCT_ID }}
-          DODO_WEBHOOK_SECRET: ${{ secrets.DODO_WEBHOOK_SECRET }}
+          DODO_PAYMENTS_ENABLED: ${{ vars.DODO_PAYMENTS_ENABLED || 'false' }}
 
       - name: Verify Cloudflare credentials
         run: bunx wrangler whoami
@@ -66,11 +60,23 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
 
-      - name: Sync Cloudflare Worker secrets
+      - name: Sync core Cloudflare Worker secrets
         run: |
           printf '%s' "$DB_URL" | bunx wrangler versions secret put DB_URL --config dist/server/wrangler.json
           printf '%s' "$UPSTASH_REDIS_REST_URL" | bunx wrangler versions secret put UPSTASH_REDIS_REST_URL --config dist/server/wrangler.json
           printf '%s' "$UPSTASH_REDIS_REST_TOKEN" | bunx wrangler versions secret put UPSTASH_REDIS_REST_TOKEN --config dist/server/wrangler.json
+          printf '%s' "$DODO_PAYMENTS_ENABLED" | bunx wrangler versions secret put DODO_PAYMENTS_ENABLED --config dist/server/wrangler.json
+        env:
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          DB_URL: ${{ secrets.DB_URL }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          DODO_PAYMENTS_ENABLED: ${{ vars.DODO_PAYMENTS_ENABLED || 'false' }}
+
+      - name: Sync Dodo Cloudflare Worker secrets
+        if: ${{ vars.DODO_PAYMENTS_ENABLED == 'true' }}
+        run: |
           printf '%s' "$DODO_API_KEY" | bunx wrangler versions secret put DODO_API_KEY --config dist/server/wrangler.json
           printf '%s' "$DODO_ENVIRONMENT" | bunx wrangler versions secret put DODO_ENVIRONMENT --config dist/server/wrangler.json
           printf '%s' "$DODO_PRODUCT_ID" | bunx wrangler versions secret put DODO_PRODUCT_ID --config dist/server/wrangler.json
@@ -78,9 +84,6 @@ jobs:
         env:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          DB_URL: ${{ secrets.DB_URL }}
-          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
-          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
           DODO_API_KEY: ${{ secrets.DODO_API_KEY }}
           DODO_ENVIRONMENT: ${{ secrets.DODO_ENVIRONMENT }}
           DODO_PRODUCT_ID: ${{ secrets.DODO_PRODUCT_ID }}

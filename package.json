@@ -1,12 +1,12 @@
 {
-  "name": "my-bun-app",
+  "name": "brume-world",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "bun --bun next dev",
     "dev:vinext": "vinext dev",
-    "build": "bun --bun next build",
+    "build": "bun --bun next build --webpack",
     "build:vinext": "vinext build",
     "start": "bun --bun next start",
     "start:vinext": "vinext start",

@@ -9,6 +9,7 @@ import {
 import { isBuildingType, type BuildingType } from "@/lib/buildings";
 import { createPaidBuilding } from "@/lib/buildings-store";
 import { ensureBuildingOrdersTable, sql } from "@/lib/db";
+import { isDodoPaymentsEnabled } from "@/lib/payment-config";
 
 type BuildingOrderRow = {
   id: string;
@@ -21,6 +22,13 @@ type BuildingOrderRow = {
 };
 
 export async function POST(request: Request) {
+  if (!isDodoPaymentsEnabled()) {
+    return NextResponse.json(
+      { error: "Payments are currently disabled." },
+      { status: 503, headers: { "Retry-After": "3600" } },
+    );
+  }
+
   const payload = await request.text();
 
   try {

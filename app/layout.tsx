@@ -2,8 +2,11 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Own your spot - Add Your Website to the Island",
-  description: "Choose a building, add your website, and get featured on Island.",
+  title: {
+    default: "BRUME World",
+    template: "%s — BRUME World",
+  },
+  description: "Explore BRUME World, discover projects, and claim a place in the city.",
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",

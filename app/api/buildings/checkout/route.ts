@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createDodoCheckout } from "@/lib/dodo";
 import { validateBuildingSubmission } from "@/lib/buildings";
 import { ensureBuildingOrdersTable, sql } from "@/lib/db";
+import { isDodoPaymentsEnabled } from "@/lib/payment-config";
 
 type DodoCheckoutError = {
   errors?: Record<string, string>;
@@ -9,6 +10,13 @@ type DodoCheckoutError = {
 };
 
 export async function POST(request: Request) {
+  if (!isDodoPaymentsEnabled()) {
+    return NextResponse.json(
+      { error: "Payments are currently disabled." } satisfies DodoCheckoutError,
+      { status: 503 },
+    );
+  }
+
   try {
     await ensureBuildingOrdersTable();
     const body = await request.json();
@@ -22,8 +30,8 @@ export async function POST(request: Request) {
 
     const orderId = crypto.randomUUID();
     const origin = new URL(request.url).origin;
-    const returnUrl = `${origin}/?checkout=success&order=${orderId}`;
-    const cancelUrl = `${origin}/`;
+    const returnUrl = `${origin}/flash-arena?checkout=success&order=${orderId}`;
+    const cancelUrl = `${origin}/flash-arena`;
 
     await sql`
       insert into building_orders (

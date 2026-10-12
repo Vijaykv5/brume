@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "my-bun-app",
+  "name": "brume-world",
   "compatibility_date": "2026-08-28",
   "compatibility_flags": [
     "nodejs_compat",
@@ -10,11 +10,7 @@
     "required": [
       "DB_URL",
       "UPSTASH_REDIS_REST_URL",
-      "UPSTASH_REDIS_REST_TOKEN",
-      "DODO_API_KEY",
-      "DODO_ENVIRONMENT",
-      "DODO_PRODUCT_ID",
-      "DODO_WEBHOOK_SECRET"
+      "UPSTASH_REDIS_REST_TOKEN"
     ]
   },
   "main": "vinext/server/fetch-handler",

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="640" viewBox="0 0 1400 640" role="img" aria-labelledby="title desc">
+  <title id="title">Moss Market</title>
+  <desc id="desc">A small illustrated market stall surrounded by leaves.</desc>
+  <rect width="1400" height="640" rx="36" fill="#f2f0d8"/>
+  <circle cx="1120" cy="318" r="228" fill="#c9dda5"/>
+  <path d="M930 424h380v42H930z" fill="#315c42"/>
+  <path d="M980 230h280l62 96H918z" fill="#de7d52"/>
+  <path d="M952 326h336v138H952z" fill="#fff9de"/>
+  <path d="M1010 326v138M1230 326v138" stroke="#315c42" stroke-width="22"/>
+  <path d="M1018 404c42-70 91-90 142-31 34-59 76-56 112 4" fill="none" stroke="#6a9a52" stroke-width="26" stroke-linecap="round"/>
+  <text x="88" y="270" fill="#254535" font-family="Inter,Arial,sans-serif" font-size="102" font-weight="900">MOSS</text>
+  <text x="88" y="376" fill="#254535" font-family="Inter,Arial,sans-serif" font-size="102" font-weight="900">MARKET</text>
+  <text x="94" y="462" fill="#6b7157" font-family="Inter,Arial,sans-serif" font-size="38" font-weight="700">DIGITAL GOODS, NATURALLY</text>
+</svg>
