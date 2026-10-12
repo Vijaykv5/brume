@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRUME World — Demo Video Write-up</title>
+  <style>
+    :root { color-scheme: dark; --bg:#0b1514; --panel:#12221f; --ink:#eff8f3; --muted:#adc1b8; --mint:#91f0c1; --line:#29443b; }
+    * { box-sizing:border-box; }
+    body { margin:0; padding:clamp(20px,5vw,64px); background:radial-gradient(ellipse at 85% 0%,#174532 0,transparent 38%),var(--bg); color:var(--ink); font:16px/1.65 Inter,ui-sans-serif,system-ui,-apple-system,sans-serif; }
+    main { max-width:850px; margin:auto; }
+    .eyebrow { color:var(--mint); font-size:.78rem; font-weight:800; letter-spacing:.14em; text-transform:uppercase; }
+    h1 { margin:.3rem 0 .5rem; font-size:clamp(2.3rem,7vw,4.5rem); line-height:1; letter-spacing:-.055em; }
+    .tagline { max-width:680px; color:var(--muted); font-size:1.2rem; }
+    .links { display:flex; flex-wrap:wrap; gap:10px; margin:26px 0 38px; }
+    .links a { padding:9px 13px; border:1px solid var(--line); border-radius:999px; color:var(--mint); text-decoration:none; font-size:.9rem; }
+    .script { padding:clamp(20px,4vw,38px); border:1px solid var(--line); border-radius:22px; background:linear-gradient(145deg,rgba(18,34,31,.97),rgba(11,21,20,.97)); box-shadow:0 24px 80px #0005; }
+    h2 { margin:0 0 20px; font-size:1.2rem; }
+    section { padding:19px 0; border-top:1px solid var(--line); }
+    section:first-of-type { border-top:0; padding-top:0; }
+    .time { color:var(--mint); font-size:.78rem; font-weight:800; letter-spacing:.08em; }
+    .shot { margin:.35rem 0 .8rem; color:var(--muted); font-size:.9rem; }
+    .voice { margin:0; }
+    footer { margin:16px 0 0; color:var(--muted); font-size:.88rem; }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div class="eyebrow">Demo video narration · about 3–4 minutes</div>
+    <h1>BRUME World</h1>
+    <p class="tagline">Meet inside BRUME: a browser-based multiplayer world where shared social moments become verifiable activity on Solana.</p>
+    <nav class="links" aria-label="Project links">
+      <a href="https://brume-world.vijaydevworks001.workers.dev">Live world</a>
+      <a href="https://explorer.solana.com/tx/4Jp9D8WxXyTtNJ2fhbtZbEEFWEgpaL8yRTP3BL9CnwRiHKnRdMLdX5X6NGbfVHKvDFtrC1RwLZKpSfZj7PcdQkbM?cluster=devnet">MagicBlock delegation proof</a>
+      <a href="https://explorer.solana.com/address/5dhS3bs4CfLaNq6sEvwnDcqkTjkYPKYeettb2BE47C7p?cluster=devnet">BRUME program · Devnet</a>
+    </nav>
+  </header>
+  <article class="script" aria-labelledby="script-title">
+    <h2 id="script-title">Single demo script</h2>
+    <section>
+      <div class="time">0:00–0:25 · THE HOOK</div>
+      <p class="shot">Show the world from above, then move toward another explorer.</p>
+      <p class="voice">An online world can bring people together. But what happens to the moments they share after they log off? BRUME World is a browser-based multiplayer world where people explore, meet, and turn small social moments into verifiable on-chain activity. Let me show you how it works.</p>
+    </section>
+    <section>
+      <div class="time">0:25–1:20 · ENTER AND EXPLORE</div>
+      <p class="shot">Enter the arena, connect a devnet wallet, customize the avatar, and walk through the island city. Show a billboard and another explorer joining.</p>
+      <p class="voice">After connecting a Solana wallet, I can shape my explorer and step into a low-poly island city. I move with the keyboard, look around freely, and see other explorers in the same world. Buildings and billboards make the city a place to discover projects, not just another list of links. Player movement stays responsive through a multiplayer WebSocket service, so every step does not need to wait for a blockchain transaction. Players can also make direct, wallet-approved SOL transfers when they choose.</p>
+    </section>
+    <section>
+      <div class="time">1:20–2:00 · MEET AND PLAY</div>
+      <p class="shot">Approach a second wallet-connected explorer. Complete a high five, or play a short rock-paper-scissors round and show the result.</p>
+      <p class="voice">When two wallet-connected explorers meet, BRUME gives them something simple to do together: share a high five or start a quick game of rock, paper, scissors. Each player locks in a choice privately. The server reveals the result only after both choices are submitted, and verifies the encounter before settlement.</p>
+    </section>
+    <section>
+      <div class="time">2:00–3:05 · MAGICBLOCK AND THE PROOF</div>
+      <p class="shot">Open MagicBlock Live to show status and interaction count. Briefly show the delegation transaction in Solana Explorer.</p>
+      <p class="voice">Here is where BRUME connects the social experience to Solana. The WorldSession account is delegated to a MagicBlock Ephemeral Rollup. An encounter records who participated and what happened; the session state can then be committed back to Solana devnet. High-frequency movement stays off-chain, while meaningful interactions become auditable.
+
+The first action uses a normal wallet approval to create a scoped session. After that, a temporary session key can authorize gameplay actions without repeatedly interrupting the player with wallet pop-ups. The BRUME program checks that authorization and the encounter data before updating the shared session.</p>
+    </section>
+    <section>
+      <div class="time">3:05–3:35 · WHY BRUME</div>
+      <p class="shot">Return to the world, then finish on the BRUME title and live demo link.</p>
+      <p class="voice">BRUME brings together a playable 3D world, customizable identities, live multiplayer, proximity-based encounters, and a real MagicBlock delegation and commit flow. The program and WorldSession account are visible on devnet, so the integration can be inspected independently. BRUME World is live on Cloudflare Workers. We’re building toward a richer internet city where communities can meet, discover each other, and make shared experiences last. Connect a devnet wallet, enter the world, and meet us in BRUME.</p>
+    </section>
+  </article>
+  <footer>Recording note: the bracketed visual directions are not spoken. Use two connected browser profiles for the encounter segment; cut loading time and hold the Explorer proof on screen long enough to read.</footer>
+</main>
+</body>
+</html>

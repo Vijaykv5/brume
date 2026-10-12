@@ -5,7 +5,6 @@ import { Canvas, useFrame, useThree } from "@react-three/fiber";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { getBuildingFootprintSize, type BuildingType, type SavedBuilding } from "@/lib/buildings";
-import { getWebsiteFaviconUrl } from "@/lib/favicon";
 import {
   SmallOfficeBuilding,
 } from "./component/SmallOfficeBuilding";
@@ -750,88 +749,6 @@ const BUILDINGS_SYNC_INTERVAL_MS = 10000;
 const CHECKOUT_FOCUS_POLL_INTERVAL_MS = 2000;
 const CHECKOUT_FOCUS_MAX_POLLS = 30;
 
-function formatRecentBuildingTime(createdAt: string) {
-  const createdTime = new Date(createdAt).getTime();
-  const elapsedMs = Date.now() - createdTime;
-
-  if (!Number.isFinite(createdTime) || elapsedMs < 60_000) return "just now";
-
-  const elapsedMinutes = Math.floor(elapsedMs / 60_000);
-  if (elapsedMinutes < 60) return `${elapsedMinutes}m ago`;
-
-  const elapsedHours = Math.floor(elapsedMinutes / 60);
-  if (elapsedHours < 24) return `${elapsedHours}h ago`;
-
-  const elapsedDays = Math.floor(elapsedHours / 24);
-  if (elapsedDays < 7) return `${elapsedDays}d ago`;
-
-  return new Intl.DateTimeFormat("en", {
-    month: "short",
-    day: "numeric",
-  }).format(new Date(createdAt));
-}
-
-function RecentBuildingsPanel({
-  buildings,
-  onFocusBuilding,
-}: {
-  buildings: AddedBuilding[];
-  onFocusBuilding: (building: AddedBuilding) => void;
-}) {
-  const recentBuildings = useMemo(
-    () =>
-      [...buildings]
-        .sort(
-          (firstBuilding, secondBuilding) =>
-            new Date(secondBuilding.createdAt).getTime() -
-            new Date(firstBuilding.createdAt).getTime(),
-        )
-        .slice(0, 4),
-    [buildings],
-  );
-
-  if (recentBuildings.length === 0) return null;
-
-  return (
-    <aside className="recent-buildings-panel" aria-label="Recently added buildings">
-      <div className="recent-buildings-header">
-        <p>Recently Added</p>
-      </div>
-      <div className="recent-buildings-list">
-        {recentBuildings.map((building) => {
-          const faviconUrl = getWebsiteFaviconUrl(building.domain, 64);
-
-          return (
-            <button
-              className={`recent-building-item${
-                building.price === 10 ? " is-premium" : ""
-              }`}
-              key={building.id}
-              type="button"
-              onClick={() => onFocusBuilding(building)}
-            >
-              <span className="recent-building-icon" aria-hidden="true">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={faviconUrl} alt="" />
-              </span>
-              <span className="recent-building-copy">
-                <strong>{building.companyName}</strong>
-                <span>{building.domain}</span>
-              </span>
-              <span className="recent-building-meta">
-                {!isRevenueExcludedBuilding(building) && <span>${building.price}</span>}
-                <time dateTime={building.createdAt}>
-                  {formatRecentBuildingTime(building.createdAt)}
-                </time>
-              </span>
-            </button>
-          );
-        })}
-      </div>
-    </aside>
-  );
-}
-
 function mergeBuildingsWithLocalCounts(
   currentBuildings: AddedBuilding[],
   nextBuildings: AddedBuilding[],
@@ -866,8 +783,10 @@ function isRevenueExcludedBuilding(building: AddedBuilding) {
 
 export function SceneCanvas({
   walletAddress,
+  onDisconnect,
 }: {
   walletAddress: string;
+  onDisconnect: () => Promise<void>;
 }) {
   const multiplayer = useMultiplayer({
     walletAddress,
@@ -1164,10 +1083,6 @@ export function SceneCanvas({
     };
   }, [syncBuildings]);
 
-  const handleFocusBuilding = useCallback((building: AddedBuilding) => {
-    setFocusRequest(getAddedBuildingFocusRequest(building));
-  }, []);
-
   const handlePlayerMovementStart = useCallback(() => {
     setFocusRequest(null);
   }, []);
@@ -1316,6 +1231,7 @@ export function SceneCanvas({
       <WalletHud
         profile={multiplayer.localProfile}
         verificationState={multiplayer.walletVerificationState}
+        onDisconnect={onDisconnect}
       />
       <button
         className="reset-camera-button"
@@ -1337,10 +1253,6 @@ export function SceneCanvas({
       <AnalyticsStatsPill
         onlineNow={multiplayer.onlineCount}
         connectionState={multiplayer.connectionState}
-      />
-      <RecentBuildingsPanel
-        buildings={addedBuildings}
-        onFocusBuilding={handleFocusBuilding}
       />
       <BuildingHoverCard building={hoveredBuilding} />
       <ControlsTutorial />

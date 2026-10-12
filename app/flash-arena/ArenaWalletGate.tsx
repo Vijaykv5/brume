@@ -259,11 +259,11 @@ function WalletGateContent() {
   );
 
   const handleDisconnect = useCallback(async () => {
+    await disconnect();
     clearAccessProof();
     setSessionAccessWallet(null);
     setError("");
     setNotice("");
-    await disconnect();
   }, [disconnect]);
 
   if (!browserReady) {
@@ -281,6 +281,7 @@ function WalletGateContent() {
         <SceneCanvas
           key={publicKey.toBase58()}
           walletAddress={publicKey.toBase58()}
+          onDisconnect={handleDisconnect}
         />
       </main>
     );

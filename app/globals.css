@@ -972,7 +972,7 @@ body {
 .wallet-hud-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-start;
+  justify-content: space-between;
   gap: 8px;
   margin-top: 6px;
 }
@@ -986,6 +986,35 @@ body {
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
+}
+
+.wallet-hud-disconnect {
+  min-height: 38px;
+  padding: 0 10px;
+  color: rgb(123 55 49 / 96%);
+  background: rgb(255 241 237 / 76%);
+  border: 1px solid rgb(176 55 47 / 18%);
+  border-radius: 8px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.wallet-hud-disconnect:hover:not(:disabled) {
+  background: rgb(255 232 226 / 96%);
+}
+
+.wallet-hud-disconnect:disabled {
+  cursor: wait;
+  opacity: .72;
+}
+
+.wallet-hud-error {
+  margin: 4px 8px 0;
+  color: #923b32;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .sol-transfer-panel {
@@ -1538,192 +1567,6 @@ body {
 .analytics-stats-views span {
   color: rgb(38 54 67 / 84%);
   font-weight: 650;
-}
-
-.recent-buildings-panel {
-  position: absolute;
-  left: 16px;
-  top: max(148px, calc(env(safe-area-inset-top) + 148px));
-  z-index: 2;
-  width: min(318px, calc(100vw - 32px));
-  padding: 10px;
-  color: rgb(18 34 42 / 94%);
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 58%), rgb(255 255 255 / 38%));
-  border: 1px solid rgb(255 255 255 / 70%);
-  border-radius: 8px;
-  box-shadow:
-    0 18px 42px rgb(36 82 103 / 16%),
-    inset 0 1px 0 rgb(255 255 255 / 72%);
-  backdrop-filter: blur(18px) saturate(1.1);
-}
-
-.recent-buildings-header p {
-  margin: 0;
-  padding: 2px 4px 10px;
-  color: rgb(19 36 44 / 92%);
-  font-size: 13px;
-  font-weight: 900;
-  letter-spacing: 0;
-}
-
-.recent-buildings-list {
-  display: grid;
-  gap: 7px;
-}
-
-.recent-building-item {
-  position: relative;
-  display: grid;
-  min-height: 58px;
-  width: 100%;
-  grid-template-columns: 34px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  color: inherit;
-  background: rgb(255 255 255 / 46%);
-  border: 1px solid rgb(255 255 255 / 62%);
-  border-radius: 8px;
-  box-shadow: inset 0 1px 0 rgb(255 255 255 / 62%);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.recent-building-item > * {
-  position: relative;
-  z-index: 1;
-}
-
-.recent-building-item.is-premium {
-  overflow: hidden;
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 62%), rgb(255 255 255 / 48%)),
-    radial-gradient(circle at 18% 12%, rgb(255 238 164 / 44%), transparent 42%);
-  border-color: rgb(251 214 105 / 58%);
-  box-shadow:
-    0 10px 28px rgb(190 138 35 / 12%),
-    inset 0 1px 0 rgb(255 255 255 / 70%);
-}
-
-.recent-building-item.is-premium::before {
-  position: absolute;
-  inset: 0;
-  padding: 1px;
-  content: "";
-  background: linear-gradient(
-    115deg,
-    rgb(255 222 122 / 18%),
-    rgb(255 255 255 / 82%),
-    rgb(240 175 32 / 92%),
-    rgb(255 246 189 / 88%),
-    rgb(255 222 122 / 18%)
-  );
-  border-radius: inherit;
-  mask:
-    linear-gradient(#000 0 0) content-box,
-    linear-gradient(#000 0 0);
-  mask-composite: exclude;
-}
-
-.recent-building-item.is-premium::after {
-  position: absolute;
-  top: -30%;
-  bottom: -30%;
-  left: -42%;
-  width: 36%;
-  content: "";
-  background: linear-gradient(
-    90deg,
-    transparent,
-    rgb(255 255 255 / 54%),
-    transparent
-  );
-  transform: rotate(14deg);
-}
-
-.recent-building-item:hover {
-  background: rgb(255 255 255 / 62%);
-  transform: translateY(-1px);
-}
-
-.recent-building-item.is-premium:hover {
-  background:
-    linear-gradient(180deg, rgb(255 255 255 / 72%), rgb(255 255 255 / 56%)),
-    radial-gradient(circle at 18% 12%, rgb(255 238 164 / 54%), transparent 42%);
-}
-
-.recent-building-item:focus-visible {
-  outline: 3px solid rgb(48 121 168 / 72%);
-  outline-offset: 3px;
-}
-
-.recent-building-icon {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  overflow: hidden;
-  background: rgb(244 249 250 / 84%);
-  border: 1px solid rgb(58 86 98 / 14%);
-  border-radius: 8px;
-}
-
-.recent-building-icon img {
-  display: block;
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-
-.recent-building-copy {
-  display: grid;
-  min-width: 0;
-  gap: 3px;
-}
-
-.recent-building-copy strong,
-.recent-building-copy span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.recent-building-copy strong {
-  color: rgb(14 28 35 / 96%);
-  font-size: 13px;
-  font-weight: 900;
-  line-height: 1.1;
-}
-
-.recent-building-copy span {
-  color: rgb(47 69 79 / 72%);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.recent-building-meta {
-  display: grid;
-  justify-items: end;
-  gap: 3px;
-  white-space: nowrap;
-}
-
-.recent-building-meta span {
-  color: rgb(15 105 48 / 96%);
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.recent-building-item.is-premium .recent-building-meta span {
-  color: rgb(134 88 12 / 98%);
-}
-
-.recent-building-meta time {
-  color: rgb(47 69 79 / 62%);
-  font-size: 11px;
-  font-weight: 750;
 }
 
 .building-hover-card {
@@ -3932,14 +3775,6 @@ body {
     animation: building-hover-card-in 140ms ease-out both;
   }
 
-  .recent-building-item.is-premium::before {
-    animation: premium-listing-border 2.6s linear infinite;
-  }
-
-  .recent-building-item.is-premium::after {
-    animation: premium-listing-sheen 3.2s ease-in-out infinite;
-  }
-
   .world-interaction-panel {
     animation: world-panel-enter 200ms cubic-bezier(0, 0, 0.2, 1) both;
   }
@@ -4340,10 +4175,6 @@ body {
   .property-panel {
     top: 16px;
     bottom: auto;
-  }
-
-  .recent-buildings-panel {
-    display: none;
   }
 
   .add-building-button {

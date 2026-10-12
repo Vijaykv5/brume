@@ -19,13 +19,17 @@ import { useSolBalance } from "./useSolBalance";
 export function WalletHud({
   profile,
   verificationState,
+  onDisconnect,
 }: {
   profile: PlayerProfile;
   verificationState: WalletVerificationState;
+  onDisconnect: () => Promise<void>;
 }) {
   const { publicKey } = useWallet();
   const { balanceLamports, loading, error, refresh } = useSolBalance();
   const [copied, setCopied] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [disconnectError, setDisconnectError] = useState("");
   if (!publicKey) return null;
 
   const address = publicKey.toBase58();
@@ -82,7 +86,26 @@ export function WalletHud({
         <a href={getExplorerUrl("address", address)} target="_blank" rel="noreferrer">
           Explorer ↗
         </a>
+        <button
+          type="button"
+          className="wallet-hud-disconnect"
+          disabled={disconnecting}
+          onClick={async () => {
+            setDisconnecting(true);
+            setDisconnectError("");
+            try {
+              await onDisconnect();
+            } catch {
+              setDisconnectError("Could not disconnect. Please try again.");
+            } finally {
+              setDisconnecting(false);
+            }
+          }}
+        >
+          {disconnecting ? "Disconnecting…" : "Disconnect wallet"}
+        </button>
       </div>
+      {disconnectError && <p className="wallet-hud-error" role="alert">{disconnectError}</p>}
     </aside>
   );
 }
