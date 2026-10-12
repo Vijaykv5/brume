@@ -19,6 +19,7 @@ import {
   BRUME_PLAYER_RUN_SPEED,
   BRUME_PLAYER_WALK_SPEED,
 } from "@/multiplayer/world-config";
+import type { PlayerProfile } from "@/multiplayer/avatar-profile";
 
 const PLAYER_RADIUS = BRUME_PLAYER_RADIUS;
 const WALK_SPEED = BRUME_PLAYER_WALK_SPEED;
@@ -40,6 +41,8 @@ export function PlayerController({
   positionCorrectionRef,
   onNearbyInteractionChange,
   onMovementStart,
+  profile,
+  onCustomize,
 }: {
   inputRef: MutableRefObject<PlayerInputState>;
   motionRef: PlayerMotionRef;
@@ -48,6 +51,8 @@ export function PlayerController({
   positionCorrectionRef: MutableRefObject<Vector3Tuple | null>;
   onNearbyInteractionChange: (interaction: WorldInteraction | null) => void;
   onMovementStart: () => void;
+  profile: PlayerProfile;
+  onCustomize: () => void;
 }) {
   const playerRef = useRef<THREE.Group>(null);
   const velocityRef = useRef(new THREE.Vector3());
@@ -180,7 +185,12 @@ export function PlayerController({
 
   return (
     <group ref={playerRef} position={PLAYER_SPAWN}>
-      <PlayerAvatar motionRef={motionRef} username="BRUME Explorer" />
+      <PlayerAvatar
+        motionRef={motionRef}
+        username={profile.username}
+        avatar={profile.avatar}
+        onSelect={onCustomize}
+      />
     </group>
   );
 }

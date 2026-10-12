@@ -7,6 +7,11 @@ import {
   parseServerMessage,
 } from "./protocol";
 import { createMultiplayerServer } from "./server";
+import {
+  createDefaultPlayerProfile,
+  resolveAvatarStyle,
+  type PlayerProfile,
+} from "./avatar-profile";
 
 type MessagePredicate = (message: ServerMessage) => boolean;
 
@@ -64,7 +69,11 @@ class TestClient {
   }
 }
 
-async function connectClient(url: string, resumeToken?: string) {
+async function connectClient(
+  url: string,
+  resumeToken?: string,
+  profile?: PlayerProfile,
+) {
   const client = new TestClient(url);
   await new Promise<void>((resolve, reject) => {
     const timeout = setTimeout(
@@ -77,6 +86,7 @@ async function connectClient(url: string, resumeToken?: string) {
         type: "hello",
         protocolVersion: MULTIPLAYER_PROTOCOL_VERSION,
         ...(resumeToken ? { resumeToken } : {}),
+        ...(profile ? { profile } : {}),
       });
       resolve();
     });
@@ -103,9 +113,22 @@ describe("BRUME multiplayer server", () => {
     multiplayerServer.stop();
   });
 
+  test("falls back safely for legacy players without avatar data", () => {
+    expect(resolveAvatarStyle(undefined)).toEqual(
+      createDefaultPlayerProfile().avatar,
+    );
+    expect(resolveAvatarStyle({ outfitColor: "coral" })).toMatchObject({
+      skinTone: "warm",
+      outfitColor: "coral",
+      hatStyle: "none",
+    });
+  });
+
   test("joins, synchronizes, validates, leaves, and resumes a session", async () => {
     const first = await connectClient(socketUrl);
     expect(first.welcome.onlineCount).toBe(1);
+    expect(first.welcome.self.avatar.outfitColor).toBe("teal");
+    expect(first.welcome.self.avatar.hatStyle).toBe("none");
 
     const joinedMessage = first.client.waitFor(
       (message) => message.type === "player_joined",
@@ -114,6 +137,26 @@ describe("BRUME multiplayer server", () => {
     expect(second.welcome.onlineCount).toBe(2);
     expect(second.welcome.players.some((player) => player.id === first.welcome.playerId)).toBe(true);
     await joinedMessage;
+
+    const customizedProfile = createDefaultPlayerProfile("Mint Voyager");
+    customizedProfile.avatar = {
+      ...customizedProfile.avatar,
+      outfitColor: "coral",
+      hatStyle: "cap",
+      hatColor: "gold",
+    };
+    first.client.send({ type: "profile", profile: customizedProfile });
+    const profileUpdate = await second.client.waitFor(
+      (message) =>
+        message.type === "player_profile_updated" &&
+        message.player.id === first.welcome.playerId,
+    );
+    expect(profileUpdate.type).toBe("player_profile_updated");
+    if (profileUpdate.type === "player_profile_updated") {
+      expect(profileUpdate.player.username).toBe("Mint Voyager");
+      expect(profileUpdate.player.avatar.outfitColor).toBe("coral");
+      expect(profileUpdate.player.avatar.hatStyle).toBe("cap");
+    }
 
     first.client.send({
       type: "move",

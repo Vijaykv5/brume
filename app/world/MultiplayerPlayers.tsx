@@ -87,7 +87,11 @@ function RemotePlayer({
       position={[initialPlayer.x, initialPlayer.y, initialPlayer.z]}
       rotation={[0, initialPlayer.heading, 0]}
     >
-      <PlayerAvatar motionRef={motionRef} username={initialPlayer.username} />
+      <PlayerAvatar
+        motionRef={motionRef}
+        username={initialPlayer.username}
+        avatar={initialPlayer.avatar}
+      />
     </group>
   );
 }

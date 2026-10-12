@@ -40,6 +40,7 @@ import { useWorldKeyboard } from "./world/useWorldKeyboard";
 import { useMultiplayer } from "./world/useMultiplayer";
 import { useNearbyPlayer } from "./world/useNearbyPlayer";
 import { MultiplayerPlayers } from "./world/MultiplayerPlayers";
+import { AvatarCustomizer } from "./world/AvatarCustomizer";
 import { WorldBillboards } from "./world/WorldBillboard";
 import {
   ControlsTutorial,
@@ -879,6 +880,7 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
   const [sceneReady, setSceneReady] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [addBuildingPanelOpen, setAddBuildingPanelOpen] = useState(false);
+  const [avatarCustomizerOpen, setAvatarCustomizerOpen] = useState(false);
   const buildingsSyncInFlightRef = useRef(false);
   const playerMotionRef = useRef<PlayerMotionState>({
     position: new THREE.Vector3(...PLAYER_SPAWN),
@@ -952,10 +954,14 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
   const handleEscape = useCallback(() => {
     setSelectedInteraction(null);
     setSelectedPlayer(null);
+    setAvatarCustomizerOpen(false);
   }, []);
   const playerInputRef = useWorldKeyboard({
     enabled:
-      !addBuildingPanelOpen && !selectedInteraction && !activeSelectedPlayer,
+      !addBuildingPanelOpen &&
+      !avatarCustomizerOpen &&
+      !selectedInteraction &&
+      !activeSelectedPlayer,
     onInteract: handleInteract,
     onEscape: handleEscape,
   });
@@ -1157,6 +1163,13 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
     setFocusRequest(null);
   }, []);
 
+  const openAvatarCustomizer = useCallback(() => {
+    setSelectedInteraction(null);
+    setSelectedPlayer(null);
+    setAddBuildingPanelOpen(false);
+    setAvatarCustomizerOpen(true);
+  }, []);
+
   const handleVisitBuilding = async (buildingId: string) => {
     const updateLocalClickCount = (delta: number) => {
       setAddedBuildings((currentBuildings) =>
@@ -1267,6 +1280,8 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
           positionCorrectionRef={multiplayer.positionCorrectionRef}
           onNearbyInteractionChange={setNearbyInteraction}
           onMovementStart={handlePlayerMovementStart}
+          profile={multiplayer.localProfile}
+          onCustomize={openAvatarCustomizer}
         />
         <MultiplayerPlayers
           players={multiplayer.remotePlayers}
@@ -1300,6 +1315,13 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
       >
         Reset camera
       </button>
+      <button
+        className="avatar-customize-button"
+        type="button"
+        onClick={openAvatarCustomizer}
+      >
+        Customize character
+      </button>
       <AnalyticsStatsPill
         onlineNow={multiplayer.onlineCount}
         connectionState={multiplayer.connectionState}
@@ -1315,14 +1337,14 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
       <ControlsTutorial />
       <InteractionPrompt
         interaction={
-          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen || nearbyPlayer
+          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen || avatarCustomizerOpen || nearbyPlayer
             ? null
             : nearbyInteraction
         }
       />
       <PlayerInteractionPrompt
         player={
-          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen
+          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen || avatarCustomizerOpen
             ? null
             : nearbyPlayer
         }
@@ -1341,6 +1363,16 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
         player={activeSelectedPlayer}
         onClose={() => setSelectedPlayer(null)}
       />
+      {avatarCustomizerOpen && (
+        <AvatarCustomizer
+          profile={multiplayer.localProfile}
+          onClose={() => setAvatarCustomizerOpen(false)}
+          onSave={(profile) => {
+            multiplayer.updateLocalProfile(profile);
+            setAvatarCustomizerOpen(false);
+          }}
+        />
+      )}
       <AddBuildingPanel
         onAddBuilding={handleAddBuilding}
         open={addBuildingPanelOpen}
@@ -1348,6 +1380,7 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
           if (open) {
             setSelectedInteraction(null);
             setSelectedPlayer(null);
+            setAvatarCustomizerOpen(false);
           }
           setAddBuildingPanelOpen(open);
         }}

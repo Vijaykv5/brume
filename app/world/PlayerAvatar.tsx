@@ -1,10 +1,67 @@
 "use client";
 
 import { Billboard } from "@react-three/drei";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, type ThreeEvent } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
+import {
+  AVATAR_ACCENT_OPTIONS,
+  AVATAR_COLOR_OPTIONS,
+  AVATAR_PANTS_OPTIONS,
+  AVATAR_SKIN_OPTIONS,
+  getAvatarColor,
+  resolveAvatarStyle,
+  type AvatarStyle,
+} from "@/multiplayer/avatar-profile";
 import type { PlayerMotionRef } from "./types";
+
+function AvatarHat({ avatar }: { avatar: AvatarStyle }) {
+  if (avatar.hatStyle === "none") return null;
+  const color = getAvatarColor(AVATAR_COLOR_OPTIONS, avatar.hatColor);
+
+  if (avatar.hatStyle === "beanie") {
+    return (
+      <group position={[0, 2.25, 0]}>
+        <mesh castShadow scale={[1, 0.72, 1]}>
+          <sphereGeometry args={[0.38, 10, 7]} />
+          <meshStandardMaterial color={color} roughness={0.84} />
+        </mesh>
+        <mesh castShadow position={[0, 0.27, 0]}>
+          <icosahedronGeometry args={[0.105, 1]} />
+          <meshStandardMaterial color={color} roughness={0.84} />
+        </mesh>
+      </group>
+    );
+  }
+
+  if (avatar.hatStyle === "bucket") {
+    return (
+      <group position={[0, 2.27, 0]}>
+        <mesh castShadow>
+          <cylinderGeometry args={[0.3, 0.39, 0.3, 12]} />
+          <meshStandardMaterial color={color} roughness={0.84} />
+        </mesh>
+        <mesh castShadow position={[0, -0.13, 0]}>
+          <cylinderGeometry args={[0.48, 0.48, 0.07, 12]} />
+          <meshStandardMaterial color={color} roughness={0.84} />
+        </mesh>
+      </group>
+    );
+  }
+
+  return (
+    <group position={[0, 2.27, 0]}>
+      <mesh castShadow>
+        <cylinderGeometry args={[0.36, 0.39, 0.27, 12]} />
+        <meshStandardMaterial color={color} roughness={0.82} />
+      </mesh>
+      <mesh castShadow position={[0, -0.08, 0.29]}>
+        <boxGeometry args={[0.46, 0.07, 0.36]} />
+        <meshStandardMaterial color={color} roughness={0.82} />
+      </mesh>
+    </group>
+  );
+}
 
 function UsernameLabel({ username }: { username: string }) {
   const texture = useMemo(() => {
@@ -60,9 +117,13 @@ function UsernameLabel({ username }: { username: string }) {
 export function PlayerAvatar({
   motionRef,
   username,
+  avatar,
+  onSelect,
 }: {
   motionRef: PlayerMotionRef;
   username: string;
+  avatar?: AvatarStyle;
+  onSelect?: () => void;
 }) {
   const visualRef = useRef<THREE.Group>(null);
   const leftArmRef = useRef<THREE.Group>(null);
@@ -71,6 +132,33 @@ export function PlayerAvatar({
   const rightLegRef = useRef<THREE.Group>(null);
   const phaseRef = useRef(0);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const resolvedAvatar = resolveAvatarStyle(avatar);
+  const skinColor = getAvatarColor(AVATAR_SKIN_OPTIONS, resolvedAvatar.skinTone);
+  const skinAccent =
+    AVATAR_SKIN_OPTIONS.find((option) => option.id === resolvedAvatar.skinTone)?.accent ??
+    AVATAR_SKIN_OPTIONS[0].accent;
+  const outfitColor = getAvatarColor(
+    AVATAR_COLOR_OPTIONS,
+    resolvedAvatar.outfitColor,
+  );
+  const accentColor = getAvatarColor(
+    AVATAR_ACCENT_OPTIONS,
+    resolvedAvatar.accentColor,
+  );
+  const pantsColor = getAvatarColor(
+    AVATAR_PANTS_OPTIONS,
+    resolvedAvatar.pantsColor,
+  );
+
+  const handleSelect = (event: ThreeEvent<MouseEvent>) => {
+    if (!onSelect) return;
+    event.stopPropagation();
+    onSelect();
+  };
+
+  useEffect(() => () => {
+    document.body.style.cursor = "default";
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -140,15 +228,28 @@ export function PlayerAvatar({
   });
 
   return (
-    <group>
+    <group
+      onClick={handleSelect}
+      onPointerOver={(event) => {
+        if (!onSelect) return;
+        event.stopPropagation();
+        document.body.style.cursor = "pointer";
+      }}
+      onPointerOut={(event) => {
+        if (!onSelect) return;
+        event.stopPropagation();
+        document.body.style.cursor = "default";
+      }}
+    >
       <group ref={visualRef}>
+        <AvatarHat avatar={resolvedAvatar} />
         <mesh castShadow position={[0, 1.98, 0]}>
           <icosahedronGeometry args={[0.35, 1]} />
-          <meshStandardMaterial color="#f0bd88" roughness={0.82} />
+          <meshStandardMaterial color={skinColor} roughness={0.82} />
         </mesh>
         <mesh castShadow position={[0, 1.93, 0.31]} scale={[1, 0.34, 0.18]}>
           <sphereGeometry args={[0.19, 8, 6]} />
-          <meshStandardMaterial color="#d98d62" roughness={0.78} />
+          <meshStandardMaterial color={skinAccent} roughness={0.78} />
         </mesh>
         {[-0.12, 0.12].map((x) => (
           <mesh key={x} position={[x, 2.04, 0.31]}>
@@ -159,44 +260,44 @@ export function PlayerAvatar({
 
         <mesh castShadow position={[0, 1.34, 0]}>
           <boxGeometry args={[0.72, 0.92, 0.44]} />
-          <meshStandardMaterial color="#176f63" roughness={0.8} />
+          <meshStandardMaterial color={outfitColor} roughness={0.8} />
         </mesh>
         <mesh position={[0, 1.44, 0.225]}>
           <boxGeometry args={[0.4, 0.18, 0.03]} />
-          <meshStandardMaterial color="#a8e46b" roughness={0.72} />
+          <meshStandardMaterial color={accentColor} roughness={0.72} />
         </mesh>
 
         <group ref={leftArmRef} position={[-0.48, 1.66, 0]}>
           <mesh castShadow position={[0, -0.38, 0]}>
             <capsuleGeometry args={[0.12, 0.58, 4, 7]} />
-            <meshStandardMaterial color="#e7aa78" roughness={0.82} />
+            <meshStandardMaterial color={skinColor} roughness={0.82} />
           </mesh>
         </group>
         <group ref={rightArmRef} position={[0.48, 1.66, 0]}>
           <mesh castShadow position={[0, -0.38, 0]}>
             <capsuleGeometry args={[0.12, 0.58, 4, 7]} />
-            <meshStandardMaterial color="#e7aa78" roughness={0.82} />
+            <meshStandardMaterial color={skinColor} roughness={0.82} />
           </mesh>
         </group>
 
         <group ref={leftLegRef} position={[-0.2, 0.92, 0]}>
           <mesh castShadow position={[0, -0.42, 0]}>
             <capsuleGeometry args={[0.15, 0.58, 4, 7]} />
-            <meshStandardMaterial color="#263c4a" roughness={0.84} />
+            <meshStandardMaterial color={pantsColor} roughness={0.84} />
           </mesh>
           <mesh castShadow position={[0, -0.78, 0.1]}>
             <boxGeometry args={[0.34, 0.18, 0.52]} />
-            <meshStandardMaterial color="#f3efe5" roughness={0.9} />
+            <meshStandardMaterial color={accentColor} roughness={0.9} />
           </mesh>
         </group>
         <group ref={rightLegRef} position={[0.2, 0.92, 0]}>
           <mesh castShadow position={[0, -0.42, 0]}>
             <capsuleGeometry args={[0.15, 0.58, 4, 7]} />
-            <meshStandardMaterial color="#263c4a" roughness={0.84} />
+            <meshStandardMaterial color={pantsColor} roughness={0.84} />
           </mesh>
           <mesh castShadow position={[0, -0.78, 0.1]}>
             <boxGeometry args={[0.34, 0.18, 0.52]} />
-            <meshStandardMaterial color="#f3efe5" roughness={0.9} />
+            <meshStandardMaterial color={accentColor} roughness={0.9} />
           </mesh>
         </group>
       </group>

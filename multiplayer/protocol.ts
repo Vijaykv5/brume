@@ -1,3 +1,6 @@
+import type { AvatarStyle, PlayerProfile } from "./avatar-profile";
+import { parsePlayerProfile } from "./avatar-profile";
+
 export const MULTIPLAYER_PATH = "/multiplayer";
 export const MULTIPLAYER_PROTOCOL_VERSION = 1;
 
@@ -6,6 +9,7 @@ export type PlayerMovementState = "idle" | "walking" | "running";
 export type NetworkPlayer = {
   id: string;
   username: string;
+  avatar: AvatarStyle;
   x: number;
   y: number;
   z: number;
@@ -19,6 +23,12 @@ export type ClientHelloMessage = {
   type: "hello";
   protocolVersion: number;
   resumeToken?: string;
+  profile?: PlayerProfile;
+};
+
+export type ClientProfileMessage = {
+  type: "profile";
+  profile: PlayerProfile;
 };
 
 export type ClientMovementMessage = {
@@ -38,6 +48,7 @@ export type ClientPingMessage = {
 export type ClientMessage =
   | ClientHelloMessage
   | ClientMovementMessage
+  | ClientProfileMessage
   | ClientPingMessage;
 
 export type ServerWelcomeMessage = {
@@ -59,6 +70,11 @@ export type ServerPlayerJoinedMessage = {
 
 export type ServerPlayerUpdatedMessage = {
   type: "player_updated";
+  player: NetworkPlayer;
+};
+
+export type ServerPlayerProfileUpdatedMessage = {
+  type: "player_profile_updated";
   player: NetworkPlayer;
 };
 
@@ -97,6 +113,7 @@ export type ServerMessage =
   | ServerWelcomeMessage
   | ServerPlayerJoinedMessage
   | ServerPlayerUpdatedMessage
+  | ServerPlayerProfileUpdatedMessage
   | ServerPlayerLeftMessage
   | ServerSnapshotMessage
   | ServerCorrectionMessage
@@ -112,10 +129,13 @@ export function parseClientMessage(value: string): ClientMessage | null {
     const message = JSON.parse(value) as Record<string, unknown>;
 
     if (message.type === "hello") {
+      const profile =
+        message.profile === undefined ? undefined : parsePlayerProfile(message.profile);
       if (
         typeof message.protocolVersion !== "number" ||
         (message.resumeToken !== undefined &&
-          typeof message.resumeToken !== "string")
+          typeof message.resumeToken !== "string") ||
+        (message.profile !== undefined && !profile)
       ) {
         return null;
       }
@@ -124,7 +144,13 @@ export function parseClientMessage(value: string): ClientMessage | null {
         type: "hello",
         protocolVersion: message.protocolVersion,
         ...(message.resumeToken ? { resumeToken: message.resumeToken } : {}),
+        ...(profile ? { profile } : {}),
       };
+    }
+
+    if (message.type === "profile") {
+      const profile = parsePlayerProfile(message.profile);
+      return profile ? { type: "profile", profile } : null;
     }
 
     if (message.type === "move") {

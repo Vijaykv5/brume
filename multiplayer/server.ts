@@ -6,6 +6,10 @@ import {
   type ServerMessage,
   parseClientMessage,
 } from "./protocol";
+import {
+  createDefaultPlayerProfile,
+  type PlayerProfile,
+} from "./avatar-profile";
 import { validateMovement } from "./validation";
 import {
   BRUME_PLAYER_RADIUS,
@@ -61,13 +65,17 @@ function createSpawnPosition(activeCount: number) {
   };
 }
 
-function createPlayer(activeCount: number): NetworkPlayer {
+function createPlayer(activeCount: number, profile?: PlayerProfile): NetworkPlayer {
   const id = crypto.randomUUID();
   const spawn = createSpawnPosition(activeCount);
+  const resolvedProfile = profile ?? createDefaultPlayerProfile(
+    `Explorer ${id.slice(0, 4).toUpperCase()}`,
+  );
 
   return {
     id,
-    username: `Explorer ${id.slice(0, 4).toUpperCase()}`,
+    username: resolvedProfile.username,
+    avatar: resolvedProfile.avatar,
     x: spawn.x,
     y: BRUME_WORLD_GROUND_Y,
     z: spawn.z,
@@ -259,7 +267,7 @@ export function createMultiplayerServer({
             ? resumedSession
             : {
                 resumeToken: crypto.randomUUID(),
-                player: createPlayer(activeSockets.size),
+                player: createPlayer(activeSockets.size, message.profile),
                 expiresAt: Number.POSITIVE_INFINITY,
                 cleanupTimer: null,
               };
@@ -271,6 +279,12 @@ export function createMultiplayerServer({
           session.expiresAt = Number.POSITIVE_INFINITY;
           session.player = {
             ...session.player,
+            ...(message.profile
+              ? {
+                  username: message.profile.username,
+                  avatar: message.profile.avatar,
+                }
+              : {}),
             movementState: "idle",
             updatedAt: now,
           };
@@ -324,6 +338,20 @@ export function createMultiplayerServer({
         const resumeToken = sessionTokenByPlayerId.get(socket.data.playerId);
         const session = resumeToken ? sessionsByToken.get(resumeToken) : null;
         if (!session) return;
+
+        if (message.type === "profile") {
+          session.player = {
+            ...session.player,
+            username: message.profile.username,
+            avatar: message.profile.avatar,
+            updatedAt: now,
+          };
+          broadcast(
+            { type: "player_profile_updated", player: session.player },
+            session.player.id,
+          );
+          return;
+        }
 
         const result = validateMovement(session.player, message, {
           now,

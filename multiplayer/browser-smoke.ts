@@ -248,27 +248,53 @@ async function main() {
     const firstSocketMessages = collectSocketMessages(firstClient);
     const secondSocketMessages = collectSocketMessages(secondClient);
     const firstSentSocketMessages = collectSentSocketMessages(firstClient);
-    await Promise.all([
-      firstClient.send("Page.navigate", { url: TEST_URL }),
-      secondClient.send("Page.navigate", { url: TEST_URL }),
-    ]);
-
     const onlineTextExpression =
       "document.querySelector('.analytics-stats-online')?.textContent?.replace(/\\s+/g, ' ').trim() ?? ''";
-    await Promise.all([
-      waitForValue(
-        firstClient,
-        onlineTextExpression,
-        (value: string) => value.startsWith("2") && value.includes("online now"),
-        "first tab online count",
-      ),
-      waitForValue(
-        secondClient,
-        onlineTextExpression,
-        (value: string) => value.startsWith("2") && value.includes("online now"),
-        "second tab online count",
-      ),
-    ]);
+    await firstClient.send("Page.navigate", { url: TEST_URL });
+    await waitForValue(
+      firstClient,
+      onlineTextExpression,
+      (value: string) => value.startsWith("1") && value.includes("online now"),
+      "first tab initial connection",
+    );
+    await secondClient.send("Page.navigate", { url: TEST_URL });
+    try {
+      await Promise.all([
+        waitForValue(
+          firstClient,
+          onlineTextExpression,
+          (value: string) => value.startsWith("2") && value.includes("online now"),
+          "first tab online count",
+        ),
+        waitForValue(
+          secondClient,
+          onlineTextExpression,
+          (value: string) => value.startsWith("2") && value.includes("online now"),
+          "second tab online count",
+        ),
+      ]);
+    } catch (error) {
+      const diagnostics = await Promise.all(
+        [firstClient, secondClient].map((client) =>
+          evaluate<Record<string, string>>(
+            client,
+            `({
+              url: location.href,
+              title: document.title,
+              online: ${onlineTextExpression},
+              body: document.body?.innerText?.slice(0, 240) ?? ''
+            })`,
+          ),
+        ),
+      );
+      throw new Error(
+        `${error instanceof Error ? error.message : "Online count failed."} ` +
+          `tabs=${JSON.stringify(diagnostics)} frames=${JSON.stringify([
+            firstSocketMessages.slice(-3),
+            secondSocketMessages.slice(-3),
+          ])}`,
+      );
+    }
     console.info("✓ two browser tabs report 2 active connections");
 
     const firstWelcome = await waitForSocketMessage(
@@ -340,6 +366,62 @@ async function main() {
       "closed player interaction menu",
     );
     console.info("✓ proximity prompt and player interaction menu render");
+
+    await evaluate(
+      firstClient,
+      "document.querySelector('.avatar-customize-button')?.click()",
+    );
+    await waitForValue(
+      firstClient,
+      "Boolean(document.querySelector('.avatar-customizer-panel'))",
+      Boolean,
+      "avatar customizer",
+    );
+    await evaluate(
+      firstClient,
+      `(() => {
+        const input = document.querySelector('#avatar-name');
+        const setter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set;
+        if (!(input instanceof HTMLInputElement) || !setter) return false;
+        setter.call(input, 'Smoke Pilot');
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        document.querySelector('[data-avatar-option="outfit-coral"]')?.click();
+        document.querySelector('[data-avatar-option="hat-cap"]')?.click();
+        return true;
+      })()`,
+    );
+    await waitForValue(
+      firstClient,
+      `document.querySelector('[data-avatar-option="outfit-coral"]')?.getAttribute('aria-pressed') === 'true' && document.querySelector('[data-avatar-option="hat-cap"]')?.getAttribute('aria-pressed') === 'true'`,
+      Boolean,
+      "selected avatar style",
+    );
+    await evaluate(
+      firstClient,
+      "document.querySelector('#avatar-name')?.form?.requestSubmit()",
+    );
+    const profileUpdate = await waitForSocketMessage(
+      secondSocketMessages,
+      (message) =>
+        message.type === "player_profile_updated" &&
+        message.player.id === firstWelcome.playerId &&
+        message.player.username === "Smoke Pilot",
+      "remote avatar profile update",
+    );
+    if (
+      profileUpdate.type !== "player_profile_updated" ||
+      profileUpdate.player.avatar.outfitColor !== "coral" ||
+      profileUpdate.player.avatar.hatStyle !== "cap"
+    ) {
+      throw new Error("Avatar customization did not synchronize correctly.");
+    }
+    await waitForValue(
+      firstClient,
+      "Boolean(document.querySelector('.avatar-customizer-panel'))",
+      (value: boolean) => !value,
+      "closed avatar customizer",
+    );
+    console.info("✓ character name, outfit, and hat changes synchronize live");
 
     await firstClient.send("Page.bringToFront");
     await firstClient.send("Emulation.setFocusEmulationEnabled", {
