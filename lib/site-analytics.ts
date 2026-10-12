@@ -2,8 +2,6 @@ import { Redis } from "@upstash/redis";
 import { ensureSiteAnalyticsTables, sql } from "@/lib/db";
 
 const SITE_VIEWS_KEY = "brume-world:analytics:views:v1";
-const SITE_ONLINE_KEY = "brume-world:analytics:online:v1";
-const ONLINE_WINDOW_SECONDS = 90;
 const VISITOR_HASH_PEPPER = "brume-world-site-analytics-v1";
 
 const redis =
@@ -16,7 +14,6 @@ const redis =
 
 export type SiteAnalyticsSummary = {
   configured: boolean;
-  onlineNow: number;
   views: number;
 };
 
@@ -27,20 +24,6 @@ function isValidVisitorId(visitorId: unknown): visitorId is string {
     visitorId.length <= 96 &&
     /^[a-zA-Z0-9:_-]+$/.test(visitorId)
   );
-}
-
-async function cleanupOfflineVisitors(nowSeconds: number) {
-  if (!redis) return;
-
-  try {
-    await redis.zremrangebyscore(
-      SITE_ONLINE_KEY,
-      0,
-      nowSeconds - ONLINE_WINDOW_SECONDS,
-    );
-  } catch (error) {
-    console.warn("Failed to clean up online visitors", error);
-  }
 }
 
 async function hashVisitorId(visitorId: string) {
@@ -122,33 +105,23 @@ export async function getSiteAnalyticsSummary(): Promise<SiteAnalyticsSummary> {
 
     return {
       configured: durableViews > 0,
-      onlineNow: 0,
       views: durableViews,
     };
   }
 
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  await cleanupOfflineVisitors(nowSeconds);
-
   const durableViews = await getDurableViewsTotal();
   let views = durableViews;
-  let onlineNow = 0;
 
   try {
-    const [redisViews, redisOnlineNow] = await Promise.all([
-      redis.get<number>(SITE_VIEWS_KEY),
-      redis.zcard(SITE_ONLINE_KEY),
-    ]);
+    const redisViews = await redis.get<number>(SITE_VIEWS_KEY);
 
     views = Math.max(Number(redisViews ?? 0), durableViews);
-    onlineNow = Number(redisOnlineNow ?? 0);
   } catch (error) {
     console.warn("Failed to read live site analytics", error);
   }
 
   return {
     configured: true,
-    onlineNow,
     views,
   };
 }
@@ -171,22 +144,13 @@ export async function trackSiteVisit(input: {
       status: 400,
       summary: {
         configured: true,
-        onlineNow: 0,
         views: 0,
       },
     };
   }
 
-  const nowSeconds = Math.floor(Date.now() / 1000);
-  await cleanupOfflineVisitors(nowSeconds);
-
   const shouldCountView = input.countView === true;
   const analyticsWrites = [
-    redis.zadd(SITE_ONLINE_KEY, {
-      score: nowSeconds,
-      member: input.visitorId,
-    }),
-    redis.expire(SITE_ONLINE_KEY, ONLINE_WINDOW_SECONDS * 3),
     shouldCountView ? redis.incr(SITE_VIEWS_KEY) : Promise.resolve(null),
     shouldCountView ? persistDailyViewSafely(input.visitorId) : Promise.resolve(null),
   ];

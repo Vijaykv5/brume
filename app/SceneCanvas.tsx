@@ -37,13 +37,19 @@ import type {
   WorldInteraction,
 } from "./world/types";
 import { useWorldKeyboard } from "./world/useWorldKeyboard";
+import { useMultiplayer } from "./world/useMultiplayer";
+import { useNearbyPlayer } from "./world/useNearbyPlayer";
+import { MultiplayerPlayers } from "./world/MultiplayerPlayers";
 import { WorldBillboards } from "./world/WorldBillboard";
 import {
   ControlsTutorial,
   InteractionPanel,
   InteractionPrompt,
+  PlayerInteractionPanel,
+  PlayerInteractionPrompt,
   WorldLoading,
 } from "./world/WorldHud";
+import type { NetworkPlayer } from "@/multiplayer/protocol";
 import {
   EDGE_ROCK_PLACEMENTS,
   EXAMPLE_BILLBOARDS,
@@ -862,12 +868,14 @@ function isRevenueExcludedBuilding(building: AddedBuilding) {
 }
 
 export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
+  const multiplayer = useMultiplayer();
   const [cameraResetToken, setCameraResetToken] = useState(0);
   const [addedBuildings, setAddedBuildings] = useState<AddedBuilding[]>([]);
   const [hoveredBuilding, setHoveredBuilding] = useState<BuildingHoverCardData | null>(null);
   const [focusRequest, setFocusRequest] = useState<CameraFocusRequest | null>(null);
   const [nearbyInteraction, setNearbyInteraction] = useState<WorldInteraction | null>(null);
   const [selectedInteraction, setSelectedInteraction] = useState<WorldInteraction | null>(null);
+  const [selectedPlayer, setSelectedPlayer] = useState<NetworkPlayer | null>(null);
   const [sceneReady, setSceneReady] = useState(false);
   const [loadError, setLoadError] = useState("");
   const [addBuildingPanelOpen, setAddBuildingPanelOpen] = useState(false);
@@ -879,6 +887,10 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
     moving: false,
     running: false,
   });
+  const nearbyPlayer = useNearbyPlayer(
+    playerMotionRef,
+    multiplayer.remotePlayersRef,
+  );
   const worldInteractions = useMemo<WorldInteraction[]>(
     () => [
       ...EXAMPLE_BILLBOARDS,
@@ -920,14 +932,30 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
     ],
     [addedBuildings],
   );
+  const activeSelectedPlayer =
+    selectedPlayer &&
+    multiplayer.remotePlayers.some((player) => player.id === selectedPlayer.id)
+      ? selectedPlayer
+      : null;
   const handleInteract = useCallback(() => {
-    if (nearbyInteraction) setSelectedInteraction(nearbyInteraction);
-  }, [nearbyInteraction]);
+    if (nearbyPlayer) {
+      setSelectedInteraction(null);
+      setSelectedPlayer(nearbyPlayer);
+      return;
+    }
+
+    if (nearbyInteraction) {
+      setSelectedPlayer(null);
+      setSelectedInteraction(nearbyInteraction);
+    }
+  }, [nearbyInteraction, nearbyPlayer]);
   const handleEscape = useCallback(() => {
     setSelectedInteraction(null);
+    setSelectedPlayer(null);
   }, []);
   const playerInputRef = useWorldKeyboard({
-    enabled: !addBuildingPanelOpen && !selectedInteraction,
+    enabled:
+      !addBuildingPanelOpen && !selectedInteraction && !activeSelectedPlayer,
     onInteract: handleInteract,
     onEscape: handleEscape,
   });
@@ -1180,7 +1208,12 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
   };
 
   return (
-    <div className="scene-stage">
+    <div
+      className="scene-stage"
+      data-multiplayer-state={multiplayer.connectionState}
+      data-remote-player-count={multiplayer.remotePlayers.length}
+      data-nearby-player-id={nearbyPlayer?.id ?? ""}
+    >
       <Canvas
         className="scene-canvas"
         dpr={[1, 1.75]}
@@ -1231,8 +1264,15 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
           motionRef={playerMotionRef}
           colliders={worldColliders}
           interactions={worldInteractions}
+          positionCorrectionRef={multiplayer.positionCorrectionRef}
           onNearbyInteractionChange={setNearbyInteraction}
           onMovementStart={handlePlayerMovementStart}
+        />
+        <MultiplayerPlayers
+          players={multiplayer.remotePlayers}
+          playersRef={multiplayer.remotePlayersRef}
+          localMotionRef={playerMotionRef}
+          sendLocalState={multiplayer.sendLocalState}
         />
         <SkyBirds />
         <ContactShadows
@@ -1260,7 +1300,10 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
       >
         Reset camera
       </button>
-      <AnalyticsStatsPill />
+      <AnalyticsStatsPill
+        onlineNow={multiplayer.onlineCount}
+        connectionState={multiplayer.connectionState}
+      />
       <p className="sr-only" aria-live="polite">
         Made ${revenueFormatter.format(totalRevenue)} till now
       </p>
@@ -1272,7 +1315,16 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
       <ControlsTutorial />
       <InteractionPrompt
         interaction={
-          selectedInteraction || addBuildingPanelOpen ? null : nearbyInteraction
+          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen || nearbyPlayer
+            ? null
+            : nearbyInteraction
+        }
+      />
+      <PlayerInteractionPrompt
+        player={
+          selectedInteraction || activeSelectedPlayer || addBuildingPanelOpen
+            ? null
+            : nearbyPlayer
         }
       />
       <InteractionPanel
@@ -1284,11 +1336,19 @@ export function SceneCanvas({ paymentsEnabled }: { paymentsEnabled: boolean }) {
           }
         }}
       />
+      <PlayerInteractionPanel
+        key={activeSelectedPlayer?.id ?? "no-player"}
+        player={activeSelectedPlayer}
+        onClose={() => setSelectedPlayer(null)}
+      />
       <AddBuildingPanel
         onAddBuilding={handleAddBuilding}
         open={addBuildingPanelOpen}
         onOpenChange={(open) => {
-          if (open) setSelectedInteraction(null);
+          if (open) {
+            setSelectedInteraction(null);
+            setSelectedPlayer(null);
+          }
           setAddBuildingPanelOpen(open);
         }}
         paymentsEnabled={paymentsEnabled}

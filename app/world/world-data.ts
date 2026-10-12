@@ -3,6 +3,11 @@ import type {
   Vector3Tuple,
   WorldCollider,
 } from "./types";
+import {
+  BRUME_PLAYER_SPAWN,
+  BRUME_WORLD_GROUND_Y,
+  BRUME_WORLD_RADIUS,
+} from "@/multiplayer/world-config";
 
 export type TreePlacement = {
   position: Vector3Tuple;
@@ -23,9 +28,9 @@ export type TrunkPlacement = {
   scale: number;
 };
 
-export const WORLD_GROUND_Y = 0.46;
-export const PLAYER_SPAWN: Vector3Tuple = [0, WORLD_GROUND_Y, 8];
-export const PLAYER_WORLD_RADIUS = 68;
+export const WORLD_GROUND_Y = BRUME_WORLD_GROUND_Y;
+export const PLAYER_SPAWN: Vector3Tuple = [...BRUME_PLAYER_SPAWN];
+export const PLAYER_WORLD_RADIUS = BRUME_WORLD_RADIUS;
 
 export const TREE_PLACEMENTS: TreePlacement[] = [
   { position: [-24, 0.46, -18], scale: 1.36, rotation: -0.4, leaf: "#86bf61", leafAccent: "#c9e8a5" },

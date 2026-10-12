@@ -9,14 +9,20 @@ import { PlayerAvatar } from "./PlayerAvatar";
 import type {
   PlayerInputState,
   PlayerMotionRef,
+  Vector3Tuple,
   WorldCollider,
   WorldInteraction,
 } from "./types";
 import { PLAYER_SPAWN, PLAYER_WORLD_RADIUS, WORLD_GROUND_Y } from "./world-data";
+import {
+  BRUME_PLAYER_RADIUS,
+  BRUME_PLAYER_RUN_SPEED,
+  BRUME_PLAYER_WALK_SPEED,
+} from "@/multiplayer/world-config";
 
-const PLAYER_RADIUS = 0.48;
-const WALK_SPEED = 4.2;
-const RUN_SPEED = 7.6;
+const PLAYER_RADIUS = BRUME_PLAYER_RADIUS;
+const WALK_SPEED = BRUME_PLAYER_WALK_SPEED;
+const RUN_SPEED = BRUME_PLAYER_RUN_SPEED;
 
 function dampAngle(current: number, target: number, sharpness: number, delta: number) {
   const difference = THREE.MathUtils.euclideanModulo(
@@ -31,6 +37,7 @@ export function PlayerController({
   motionRef,
   colliders,
   interactions,
+  positionCorrectionRef,
   onNearbyInteractionChange,
   onMovementStart,
 }: {
@@ -38,6 +45,7 @@ export function PlayerController({
   motionRef: PlayerMotionRef;
   colliders: WorldCollider[];
   interactions: WorldInteraction[];
+  positionCorrectionRef: MutableRefObject<Vector3Tuple | null>;
   onNearbyInteractionChange: (interaction: WorldInteraction | null) => void;
   onMovementStart: () => void;
 }) {
@@ -63,6 +71,19 @@ export function PlayerController({
     const previousPosition = previousPositionRef.current;
     const delta = Math.min(rawDelta, 0.05);
     const input = inputRef.current;
+
+    const positionCorrection = positionCorrectionRef.current;
+    if (positionCorrection) {
+      player.position.fromArray(positionCorrection);
+      player.rotation.y = motionRef.current.heading;
+      velocity.set(0, 0, 0);
+      motionRef.current.position.copy(player.position);
+      motionRef.current.velocity.set(0, 0, 0);
+      motionRef.current.moving = false;
+      motionRef.current.running = false;
+      positionCorrectionRef.current = null;
+    }
+
     const forwardInput = Number(input.forward) - Number(input.backward);
     const sideInput = Number(input.right) - Number(input.left);
     const hasDirectionalInput = forwardInput !== 0 || sideInput !== 0;

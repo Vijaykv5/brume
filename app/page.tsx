@@ -1,17 +1,12 @@
-import Link from "next/link";
+import type { Metadata } from "next";
+import LandingPage from "./LandingPage";
+
+export const metadata: Metadata = {
+  title: { absolute: "BRUME World — Wander into the internet" },
+  description:
+    "Walk the streets, discover projects, and build your corner of BRUME World.",
+};
 
 export default function Home() {
-  return (
-    <main className="product-intro landing-page" aria-labelledby="landing-title">
-      <div className="product-intro-content">
-        <h1 id="landing-title">
-          Enter BRUME World
-          <span>where products come alive</span>
-        </h1>
-        <Link className="hero-action hero-action-primary" href="/flash-arena">
-          <span>Explore BRUME World</span>
-        </Link>
-      </div>
-    </main>
-  );
+  return <LandingPage />;
 }

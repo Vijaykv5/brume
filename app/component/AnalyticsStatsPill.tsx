@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import type { MultiplayerConnectionState } from "../world/useMultiplayer";
 
 type AnalyticsSummary = {
   configured: boolean;
-  onlineNow: number;
   views: number;
 };
 
@@ -46,14 +46,28 @@ function shouldCountSessionView() {
   }
 }
 
-export function AnalyticsStatsPill() {
+export function AnalyticsStatsPill({
+  onlineNow,
+  connectionState,
+}: {
+  onlineNow: number;
+  connectionState: MultiplayerConnectionState;
+}) {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null);
   const formatter = useMemo(() => new Intl.NumberFormat("en-US"), []);
   const visibleSummary = summary ?? {
     configured: true,
-    onlineNow: 0,
     views: 0,
   };
+  const safeOnlineCount = Number.isFinite(onlineNow)
+    ? Math.max(0, Math.trunc(onlineNow))
+    : null;
+  const onlineLabel =
+    connectionState === "connected"
+      ? "online now"
+      : connectionState === "offline"
+        ? "offline"
+        : "connecting";
 
   useEffect(() => {
     let cancelled = false;
@@ -73,7 +87,6 @@ export function AnalyticsStatsPill() {
         if (!cancelled) {
           setSummary((currentSummary) => currentSummary ?? {
             configured: true,
-            onlineNow: 0,
             views: 0,
           });
         }
@@ -100,10 +113,12 @@ export function AnalyticsStatsPill() {
 
   return (
     <div className="analytics-stats-pill" aria-live="polite">
-      <div className="analytics-stats-online">
+      <div className={`analytics-stats-online is-${connectionState}`}>
         <span aria-hidden="true" />
-        <strong>{formatter.format(visibleSummary.onlineNow)}</strong>
-        <span>online now</span>
+        <strong aria-label={safeOnlineCount === null ? "no data" : undefined}>
+          {safeOnlineCount === null ? "--" : formatter.format(safeOnlineCount)}
+        </strong>
+        <span>{onlineLabel}</span>
       </div>
       <div className="analytics-stats-views">
         <strong>{formatter.format(visibleSummary.views)}</strong>

@@ -5,12 +5,15 @@
   "type": "module",
   "scripts": {
     "dev": "bun --bun next dev",
+    "dev:multiplayer": "bun run multiplayer/server.ts",
     "dev:vinext": "vinext dev",
     "build": "bun --bun next build --webpack",
     "build:vinext": "vinext build",
     "start": "bun --bun next start",
     "start:vinext": "vinext start",
     "lint": "eslint",
+    "test:multiplayer": "bun test multiplayer/server.test.ts",
+    "test:multiplayer:browser": "bun run multiplayer/browser-smoke.ts",
     "deploy:vinext": "vinext-cloudflare deploy --config dist/server/wrangler.json --experimental-warm-cdn-cache"
   },
   "dependencies": {
@@ -28,6 +31,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.54.1",
     "@tailwindcss/postcss": "^4",
+    "@types/bun": "^1.4.3",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
